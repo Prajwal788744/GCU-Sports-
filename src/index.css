@@ -1,0 +1,175 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@layer base {
+  :root {
+    --background: 72 33% 95%;
+    --foreground: 207 38% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 207 38% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 207 38% 20%;
+
+    --primary: 207 38% 33%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 45% 63%;
+    --secondary-foreground: 0 0% 100%;
+
+    --accent: 207 100% 81%;
+    --accent-foreground: 207 38% 20%;
+
+    --muted: 210 20% 92%;
+    --muted-foreground: 207 15% 46%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 20% 88%;
+    --input: 210 20% 88%;
+    --ring: 207 38% 33%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 207 38% 33%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 207 100% 81%;
+    --sidebar-primary-foreground: 207 38% 20%;
+    --sidebar-accent: 207 38% 28%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 207 38% 38%;
+    --sidebar-ring: 207 100% 81%;
+
+    --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+
+    --shadow-card: 0 1px 3px 0 hsl(207 38% 20% / 0.06), 0 1px 2px -1px hsl(207 38% 20% / 0.06);
+    --shadow-card-hover: 0 10px 25px -5px hsl(207 38% 20% / 0.1), 0 8px 10px -6px hsl(207 38% 20% / 0.08);
+    --shadow-elevated: 0 20px 40px -12px hsl(207 38% 20% / 0.15);
+  }
+
+  .dark {
+    --background: 207 38% 10%;
+    --foreground: 210 40% 95%;
+    --card: 207 38% 14%;
+    --card-foreground: 210 40% 95%;
+    --popover: 207 38% 14%;
+    --popover-foreground: 210 40% 95%;
+    --primary: 207 100% 81%;
+    --primary-foreground: 207 38% 15%;
+    --secondary: 210 45% 30%;
+    --secondary-foreground: 210 40% 95%;
+    --accent: 207 60% 25%;
+    --accent-foreground: 210 40% 95%;
+    --muted: 207 30% 18%;
+    --muted-foreground: 210 15% 60%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 207 30% 22%;
+    --input: 207 30% 22%;
+    --ring: 207 100% 81%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .animate-fade-up {
+    animation: fade-up 0.5s ease-out both;
+  }
+  .animate-fade-up-delay-1 {
+    animation: fade-up 0.5s ease-out 0.1s both;
+  }
+  .animate-fade-up-delay-2 {
+    animation: fade-up 0.5s ease-out 0.2s both;
+  }
+  .animate-fade-up-delay-3 {
+    animation: fade-up 0.5s ease-out 0.3s both;
+  }
+  .animate-scale-in {
+    animation: scale-in 0.4s ease-out both;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+}
+
+@keyframes shake-gentle {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+@keyframes slide-up-sm {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.9) translateY(10px); }
+  60% { transform: scale(1.02) translateY(-2px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes ripple-out {
+  from { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.3); }
+  to { box-shadow: 0 0 0 12px rgba(99, 102, 241, 0); }
+}
+
+@layer utilities {
+  .animate-pulse-soft {
+    animation: pulse-soft 2s ease-in-out infinite;
+  }
+  .animate-shake-gentle {
+    animation: shake-gentle 0.4s ease-in-out;
+  }
+  .animate-slide-up-sm {
+    animation: slide-up-sm 0.3s ease-out both;
+  }
+  .animate-pop-in {
+    animation: pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  .animate-ripple-out {
+    animation: ripple-out 0.6s ease-out;
+  }
+}
