@@ -14,7 +14,7 @@ const sportNames: Record<number, { name: string; icon: string }> = {
   3: { name: "Badminton", icon: "🏸" },
 };
 
-// Generate time options in 15-min intervals from 7:00 to 18:00
+// 30-min intervals from 7:00 to 18:00
 function generateTimeOptions() {
   const options: { value: string; label: string }[] = [];
   for (let h = 7; h <= 18; h++) {
@@ -32,6 +32,24 @@ function generateTimeOptions() {
 
 const TIME_OPTIONS = generateTimeOptions();
 
+// Generate 30-min timeline blocks for the visual bar
+const TIMELINE_BLOCKS = (() => {
+  const blocks: { start: string; end: string; label: string }[] = [];
+  for (let h = 7; h < 18; h++) {
+    for (const m of [0, 30]) {
+      const startH = h, startM = m;
+      const endM = m === 30 ? 0 : 30;
+      const endH = m === 30 ? h + 1 : h;
+      const start = `${String(startH).padStart(2, "0")}:${String(startM).padStart(2, "0")}`;
+      const end = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
+      const ampm = startH >= 12 ? "PM" : "AM";
+      const h12 = startH > 12 ? startH - 12 : startH === 0 ? 12 : startH;
+      blocks.push({ start, end, label: `${h12}:${String(startM).padStart(2, "0")}` });
+    }
+  }
+  return blocks;
+})();
+
 function formatTime(time: string) {
   const [h, m] = time.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
@@ -47,6 +65,7 @@ function timeToMinutes(t: string) {
 interface ExistingBooking {
   start_time: string;
   end_time: string;
+  sport_id: number;
   id: number;
 }
 
@@ -69,18 +88,21 @@ export default function Booking() {
     return { value: format(d, "yyyy-MM-dd"), label: format(d, "EEE, MMM d") };
   });
 
-  // Fetch existing bookings for conflict display
-  useEffect(() => {
-    if (!numSportId || !selectedDate) return;
-    supabase
+  // Fetch ALL bookings across ALL sports for this date (shared turf)
+  const fetchBookings = async () => {
+    if (!selectedDate) return;
+    const { data } = await supabase
       .from("bookings")
-      .select("id, start_time, end_time")
-      .eq("sport_id", numSportId)
+      .select("id, start_time, end_time, sport_id")
       .eq("date", selectedDate)
       .eq("status", "booked")
-      .order("start_time")
-      .then(({ data }) => setExistingBookings(data || []));
-  }, [numSportId, selectedDate]);
+      .order("start_time");
+    setExistingBookings(data || []);
+  };
+
+  useEffect(() => {
+    fetchBookings();
+  }, [selectedDate]);
 
   // Validation
   const durationMinutes = timeToMinutes(endTime) - timeToMinutes(startTime);
@@ -94,6 +116,30 @@ export default function Booking() {
   });
 
   const canBook = !isTooShort && !isInvalidRange && !hasOverlap;
+
+  // Check if a timeline block is booked
+  const isBlockBooked = (blockStart: string, blockEnd: string) => {
+    return existingBookings.some((b) => {
+      const bStart = b.start_time.slice(0, 5);
+      const bEnd = b.end_time.slice(0, 5);
+      return bStart < blockEnd && bEnd > blockStart;
+    });
+  };
+
+  // Get which sport booked a block
+  const getBlockSport = (blockStart: string, blockEnd: string) => {
+    const booking = existingBookings.find((b) => {
+      const bStart = b.start_time.slice(0, 5);
+      const bEnd = b.end_time.slice(0, 5);
+      return bStart < blockEnd && bEnd > blockStart;
+    });
+    return booking ? sportNames[booking.sport_id] : null;
+  };
+
+  // Check if block is in the user's selected range
+  const isBlockInSelection = (blockStart: string, blockEnd: string) => {
+    return blockStart >= startTime && blockEnd <= endTime;
+  };
 
   const handleBook = async () => {
     if (!user) return toast.error("Please log in to book");
@@ -121,7 +167,7 @@ export default function Booking() {
 
     toast.success(`Booked ${sport?.name}: ${formatTime(startTime)} – ${formatTime(endTime)}!`);
 
-    // Reset time pickers to next available slot
+    // Reset to next available slot
     const endMin = timeToMinutes(endTime);
     const nextStartH = Math.floor(endMin / 60);
     const nextStartM = endMin % 60;
@@ -133,15 +179,7 @@ export default function Booking() {
       setEndTime(`${String(nextEndH).padStart(2, "0")}:${String(nextEndM).padStart(2, "0")}`);
     }
 
-    // Refresh existing bookings list
-    const { data } = await supabase
-      .from("bookings")
-      .select("id, start_time, end_time")
-      .eq("sport_id", numSportId)
-      .eq("date", selectedDate)
-      .eq("status", "booked")
-      .order("start_time");
-    setExistingBookings(data || []);
+    fetchBookings();
   };
 
   if (!sport) {
@@ -175,13 +213,13 @@ export default function Booking() {
         </div>
       </nav>
 
-      <main className="relative z-10 mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:py-12">
+      <main className="relative z-10 mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:py-12">
         {/* Header */}
         <div className="mb-8 animate-fade-up">
           <h1 className="text-3xl font-extrabold sm:text-4xl tracking-tight">
             {sport.icon} {sport.name}
           </h1>
-          <p className="mt-2 text-white/40 text-base">Pick a date and time range to book.</p>
+          <p className="mt-2 text-white/40 text-base">Pick a date and time range. <span className="text-amber-400/70">One shared turf — bookings block all sports.</span></p>
         </div>
 
         {/* Date Picker */}
@@ -204,8 +242,52 @@ export default function Booking() {
           </div>
         </div>
 
-        {/* Time Selection */}
+        {/* Visual Timeline */}
         <div className="mb-8 animate-fade-up" style={{ animationDelay: "0.15s" }}>
+          <h3 className="text-sm font-bold text-white/50 uppercase tracking-wider mb-3">Turf Timeline</h3>
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 sm:p-5 overflow-x-auto">
+            <div className="flex gap-[2px] min-w-[700px]">
+              {TIMELINE_BLOCKS.map((block) => {
+                const booked = isBlockBooked(block.start, block.end);
+                const inSelection = !booked && isBlockInSelection(block.start, block.end);
+                const blockSport = booked ? getBlockSport(block.start, block.end) : null;
+
+                return (
+                  <div
+                    key={block.start}
+                    className={`flex-1 rounded-lg px-1 py-3 text-center transition-all duration-200 group relative cursor-default ${
+                      booked
+                        ? "bg-red-500/20 border border-red-500/30"
+                        : inSelection
+                        ? "bg-emerald-500/25 border border-emerald-500/40"
+                        : "bg-white/[0.04] border border-white/[0.04] hover:bg-white/[0.08]"
+                    }`}
+                  >
+                    <span className={`text-[10px] font-bold block ${
+                      booked ? "text-red-400" : inSelection ? "text-emerald-400" : "text-white/40"
+                    }`}>
+                      {block.label}
+                    </span>
+                    {booked && blockSport && (
+                      <span className="text-[9px] text-red-400/70 block mt-0.5">{blockSport.icon}</span>
+                    )}
+                    {booked && (
+                      <div className="absolute -top-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-red-400" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex items-center gap-5 mt-3 text-[10px] text-white/40 font-medium">
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded bg-red-500/30 border border-red-500/40" /> Booked</span>
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded bg-emerald-500/30 border border-emerald-500/40" /> Your selection</span>
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded bg-white/[0.06] border border-white/[0.06]" /> Available</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Time Selection */}
+        <div className="mb-8 animate-fade-up" style={{ animationDelay: "0.2s" }}>
           <h3 className="text-sm font-bold text-white/50 uppercase tracking-wider mb-3">Select Time</h3>
           <div className="relative rounded-[1.25rem] border-[0.75px] border-white/[0.06] p-2 md:p-3">
             <GlowingEffect spread={40} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={3} />
@@ -218,7 +300,6 @@ export default function Booking() {
                     value={startTime}
                     onChange={(e) => {
                       setStartTime(e.target.value);
-                      // Auto-advance end time to start + 1 hour if needed
                       const newEnd = timeToMinutes(e.target.value) + 60;
                       if (timeToMinutes(endTime) <= timeToMinutes(e.target.value)) {
                         const eH = Math.floor(newEnd / 60);
@@ -255,7 +336,7 @@ export default function Booking() {
                 </div>
               </div>
 
-              {/* Duration indicator */}
+              {/* Duration */}
               <div className="mt-5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-emerald-400" />
@@ -270,7 +351,7 @@ export default function Booking() {
                 </span>
               </div>
 
-              {/* Validation messages */}
+              {/* Warnings */}
               {isTooShort && !isInvalidRange && (
                 <div className="mt-4 flex items-center gap-2 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
                   <AlertTriangle className="h-4 w-4 flex-shrink-0" />
@@ -280,7 +361,7 @@ export default function Booking() {
               {hasOverlap && (
                 <div className="mt-4 flex items-center gap-2 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
                   <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                  Time slot already booked! Please choose a different time.
+                  Time slot already booked! Check the timeline above.
                 </div>
               )}
 
@@ -306,28 +387,30 @@ export default function Booking() {
           </div>
         </div>
 
-        {/* Existing Bookings for this date */}
+        {/* Existing Bookings List */}
         {existingBookings.length > 0 && (
-          <div className="animate-fade-up" style={{ animationDelay: "0.2s" }}>
+          <div className="animate-fade-up" style={{ animationDelay: "0.25s" }}>
             <h3 className="text-sm font-bold text-white/50 uppercase tracking-wider mb-3">
-              Already Booked on {dates.find((d) => d.value === selectedDate)?.label || selectedDate}
+              Today's Bookings — All Sports
             </h3>
             <div className="space-y-2">
-              {existingBookings.map((b) => (
-                <div
-                  key={b.id}
-                  className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3"
-                >
-                  <div className="h-2 w-2 rounded-full bg-red-400" />
-                  <Clock className="h-3.5 w-3.5 text-white/30" />
-                  <span className="text-sm text-white/60 font-medium">
-                    {formatTime(b.start_time)} – {formatTime(b.end_time)}
-                  </span>
-                  <span className="ml-auto rounded-full bg-red-500/10 border border-red-500/20 px-2.5 py-0.5 text-[10px] font-bold text-red-400">
-                    Booked
-                  </span>
-                </div>
-              ))}
+              {existingBookings.map((b) => {
+                const bookedSport = sportNames[b.sport_id] || { name: "Sport", icon: "🏅" };
+                return (
+                  <div
+                    key={b.id}
+                    className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3"
+                  >
+                    <div className="h-2 w-2 rounded-full bg-red-400" />
+                    <span className="text-sm">{bookedSport.icon}</span>
+                    <span className="text-sm text-white/70 font-semibold">{bookedSport.name}</span>
+                    <Clock className="h-3.5 w-3.5 text-white/30 ml-auto" />
+                    <span className="text-sm text-white/50 font-medium">
+                      {formatTime(b.start_time)} – {formatTime(b.end_time)}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
