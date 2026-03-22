@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LogOut, Menu, X, Trophy, Moon, Sun, ChevronDown, LayoutDashboard, CalendarDays } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,7 +70,7 @@ export function StudentNavbar() {
               ))}
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={() => navigate("/")}
+                onClick={async () => { await supabase.auth.signOut(); navigate("/"); }}
                 className="rounded-lg gap-2.5 font-medium cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
               >
                 <LogOut className="h-4 w-4" />
@@ -115,7 +116,7 @@ export function StudentNavbar() {
             </Link>
           ))}
           <button
-            onClick={() => { setMobileOpen(false); navigate("/"); }}
+            onClick={async () => { setMobileOpen(false); await supabase.auth.signOut(); navigate("/"); }}
             className="flex items-center w-full px-4 py-2.5 rounded-xl text-sm font-semibold text-destructive hover:bg-destructive/10 transition-colors"
           >
             <LogOut className="mr-2 h-4 w-4" /> Logout

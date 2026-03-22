@@ -5,6 +5,9 @@ import { cn } from "@/lib/utils";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Trophy, Eye, EyeOff } from "lucide-react";
 import * as THREE from "three";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 /* ═══════════════════════════════════════════
    Types
@@ -359,16 +362,43 @@ const Shader: React.FC<ShaderProps> = ({ source, uniforms, maxFps = 60 }) => {
 
 export const SignInPage = ({ className }: SignInPageProps) => {
   const navigate = useNavigate();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState<"credentials" | "success">("credentials");
   const [initialCanvasVisible, setInitialCanvasVisible] = useState(true);
   const [reverseCanvasVisible, setReverseCanvasVisible] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email || !password) {
+      toast.error("Please enter email and password");
+      return;
+    }
+
+    setIsSubmitting(true);
+    const { data, error } = await signIn(email, password);
+    setIsSubmitting(false);
+
+    if (error) {
+      toast.error(error.message || "Login failed");
+      return;
+    }
+
+    // Check user role for admin redirect
+    let targetRoute = "/dashboard";
+    if (data?.user) {
+      const { data: profile } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", data.user.id)
+        .single();
+      if (profile?.role === "admin") {
+        targetRoute = "/admin";
+      }
+    }
 
     // Quick reverse animation + navigate fast
     setReverseCanvasVisible(true);
@@ -376,11 +406,7 @@ export const SignInPage = ({ className }: SignInPageProps) => {
     setStep("success");
 
     setTimeout(() => {
-      if (email === "admin") {
-        navigate("/admin");
-      } else {
-        navigate("/dashboard");
-      }
+      navigate(targetRoute);
     }, 1500);
   };
 
@@ -521,25 +547,24 @@ export const SignInPage = ({ className }: SignInPageProps) => {
                     {/* Submit */}
                     <motion.button
                       type="submit"
-                      className="w-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold py-3 hover:from-emerald-400 hover:to-emerald-500 transition-all duration-200 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                      disabled={isSubmitting}
+                      className="w-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold py-3 hover:from-emerald-400 hover:to-emerald-500 transition-all duration-200 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                      whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
+                      whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
                     >
-                      Sign In
+                      {isSubmitting ? "Signing In..." : "Sign In"}
                     </motion.button>
                   </form>
 
                   {/* Sign up link */}
                   <p className="text-sm text-white/40 pt-1">
                     Don't have an account?{" "}
-                    <a href="#" className="text-emerald-400 hover:text-emerald-300 font-medium transition-colors">
+                    <Link to="/signup" className="text-emerald-400 hover:text-emerald-300 font-medium transition-colors">
                       Sign Up
-                    </a>
+                    </Link>
                   </p>
 
-                  <p className="text-xs text-white/30 pt-2">
-                    Type <span className="font-bold text-emerald-400">admin</span> as email to access Admin Panel
-                  </p>
+
 
                   <p className="text-xs text-white/25 pt-1">
                     By signing in, you agree to the{" "}
