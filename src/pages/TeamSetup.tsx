@@ -26,7 +26,14 @@ export default function TeamSetup() {
 
   useEffect(() => {
     supabase.from("matches").select("*").eq("id", numMatchId).single()
-      .then(({ data }) => setMatch(data));
+      .then(({ data }) => {
+        if (data) {
+          setMatch(data);
+          // Auto-redirect if match already started
+          if (data.status === "ongoing") navigate(`/scoring/${numMatchId}`, { replace: true });
+          if (data.status === "completed") navigate(`/live/${numMatchId}`, { replace: true });
+        }
+      });
     supabase.from("match_players").select("player_id, team, is_captain, players(name)")
       .eq("match_id", numMatchId)
       .then(({ data }) => {
@@ -102,19 +109,35 @@ export default function TeamSetup() {
     if (!teamB.some((p) => p.is_captain)) return toast.error("Select captain for " + (match?.team_b_name || "Team B"));
 
     setStarting(true);
-    await supabase.from("innings").insert([
-      { match_id: numMatchId, innings_number: 1, team: "A", status: "ongoing" },
-      { match_id: numMatchId, innings_number: 2, team: "B", status: "ongoing" },
-    ]);
-    const statsInserts = matchPlayers.map((mp) => ({ match_id: numMatchId, player_id: mp.player_id }));
-    await supabase.from("player_stats").insert(statsInserts);
-    await supabase.from("matches").update({
-      status: "ongoing", current_innings: 1, batting_team: "A", bowling_team: "B",
-    }).eq("id", numMatchId);
+
+    try {
+      // Check if innings already exist (e.g. from a previous failed attempt)
+      const { data: existingInnings } = await supabase.from("innings").select("id").eq("match_id", numMatchId);
+      if (!existingInnings || existingInnings.length === 0) {
+        await supabase.from("innings").insert([
+          { match_id: numMatchId, innings_number: 1, team: "A", status: "ongoing" },
+          { match_id: numMatchId, innings_number: 2, team: "B", status: "ongoing" },
+        ]);
+      }
+
+      // Check if player_stats already exist
+      const { data: existingStats } = await supabase.from("player_stats").select("id").eq("match_id", numMatchId).limit(1);
+      if (!existingStats || existingStats.length === 0) {
+        const statsInserts = matchPlayers.map((mp) => ({ match_id: numMatchId, player_id: mp.player_id }));
+        await supabase.from("player_stats").insert(statsInserts);
+      }
+
+      await supabase.from("matches").update({
+        status: "ongoing", current_innings: 1, batting_team: "A", bowling_team: "B",
+      }).eq("id", numMatchId);
+
+      toast.success("Match started!");
+      navigate(`/scoring/${numMatchId}`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to start match");
+    }
 
     setStarting(false);
-    toast.success("Match started!");
-    navigate(`/scoring/${numMatchId}`);
   };
 
   if (!match) return (

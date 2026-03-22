@@ -68,7 +68,13 @@ export default function Scoring() {
     </div>
   );
 
-  const currentInnings = innings.find((i) => i.innings_number === match.current_innings)!;
+  const currentInnings = innings.find((i) => i.innings_number === match.current_innings);
+  if (!currentInnings) return (
+    <div className="min-h-screen bg-black/[0.96] text-white flex flex-col items-center justify-center p-6">
+      <p className="text-white/50 mb-4">Unable to load innings data.</p>
+      <button onClick={() => navigate(`/team-setup/${numMatchId}`)} className="text-emerald-400 underline">Go to Team Setup</button>
+    </div>
+  );
   const battingTeam = match.batting_team;
   const bowlingTeam = match.bowling_team;
   const battingPlayers = players.filter((p) => p.team === battingTeam);
