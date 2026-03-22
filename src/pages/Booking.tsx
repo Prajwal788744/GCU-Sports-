@@ -18,7 +18,7 @@ const sportNames: Record<number, { name: string; icon: string }> = {
 function generateTimeOptions() {
   const options: { value: string; label: string }[] = [];
   for (let h = 7; h <= 18; h++) {
-    for (const m of [0, 15, 30, 45]) {
+    for (const m of [0, 30]) {
       if (h === 18 && m > 0) break;
       const value = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
       const ampm = h >= 12 ? "PM" : "AM";
@@ -120,7 +120,20 @@ export default function Booking() {
     }
 
     toast.success(`Booked ${sport?.name}: ${formatTime(startTime)} – ${formatTime(endTime)}!`);
-    // Refresh
+
+    // Reset time pickers to next available slot
+    const endMin = timeToMinutes(endTime);
+    const nextStartH = Math.floor(endMin / 60);
+    const nextStartM = endMin % 60;
+    const nextEndMin = endMin + 60;
+    const nextEndH = Math.floor(nextEndMin / 60);
+    const nextEndM = nextEndMin % 60;
+    if (nextEndH <= 18) {
+      setStartTime(`${String(nextStartH).padStart(2, "0")}:${String(nextStartM).padStart(2, "0")}`);
+      setEndTime(`${String(nextEndH).padStart(2, "0")}:${String(nextEndM).padStart(2, "0")}`);
+    }
+
+    // Refresh existing bookings list
     const { data } = await supabase
       .from("bookings")
       .select("id, start_time, end_time")
