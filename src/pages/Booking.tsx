@@ -88,15 +88,26 @@ export default function Booking() {
     return { value: format(d, "yyyy-MM-dd"), label: format(d, "EEE, MMM d") };
   });
 
-  // Fetch ALL bookings across ALL sports for this date (shared turf)
+  // Fetch bookings based on turf groups:
+  // Cricket (1) + Futsal (2) share a turf, Badminton (3) is separate
+  const isSharedTurf = numSportId === 1 || numSportId === 2;
+
   const fetchBookings = async () => {
     if (!selectedDate) return;
-    const { data } = await supabase
+    let query = supabase
       .from("bookings")
       .select("id, start_time, end_time, sport_id")
       .eq("date", selectedDate)
       .eq("status", "booked")
       .order("start_time");
+
+    if (isSharedTurf) {
+      query = query.in("sport_id", [1, 2]);
+    } else {
+      query = query.eq("sport_id", numSportId);
+    }
+
+    const { data } = await query;
     setExistingBookings(data || []);
   };
 
@@ -219,7 +230,10 @@ export default function Booking() {
           <h1 className="text-3xl font-extrabold sm:text-4xl tracking-tight">
             {sport.icon} {sport.name}
           </h1>
-          <p className="mt-2 text-white/40 text-base">Pick a date and time range. <span className="text-amber-400/70">One shared turf — bookings block all sports.</span></p>
+          <p className="mt-2 text-white/40 text-base">
+            Pick a date and time range.
+            {isSharedTurf && <span className="text-amber-400/70"> Cricket & Futsal share the same turf.</span>}
+          </p>
         </div>
 
         {/* Date Picker */}
@@ -391,7 +405,7 @@ export default function Booking() {
         {existingBookings.length > 0 && (
           <div className="animate-fade-up" style={{ animationDelay: "0.25s" }}>
             <h3 className="text-sm font-bold text-white/50 uppercase tracking-wider mb-3">
-              Today's Bookings — All Sports
+              Today's Bookings{isSharedTurf ? " — Shared Turf (Cricket & Futsal)" : " — Badminton Court"}
             </h3>
             <div className="space-y-2">
               {existingBookings.map((b) => {
