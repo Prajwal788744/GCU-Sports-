@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { toast } from "sonner";
-import { X, ArrowRightLeft, Clock, CalendarCheck, Trophy, ArrowLeft, AlertTriangle } from "lucide-react";
+import { X, ArrowRightLeft, Clock, CalendarCheck, Trophy, ArrowLeft, AlertTriangle, Gamepad2 } from "lucide-react";
 import { format, addDays } from "date-fns";
 
 const sportNames: Record<number, { name: string; icon: string }> = {
@@ -240,12 +240,20 @@ export default function MyBookings() {
             </div>
             <span className="tracking-tight text-white hidden sm:inline">GCU Sports</span>
           </div>
-          <button
-            onClick={async () => { await signOut(); navigate("/"); }}
-            className="text-sm font-medium text-red-400/70 hover:text-red-400 transition-colors"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate("/matches")}
+              className="text-sm font-medium text-emerald-400/70 hover:text-emerald-400 transition-colors flex items-center gap-1"
+            >
+              <Gamepad2 className="h-3.5 w-3.5" /> Matches
+            </button>
+            <button
+              onClick={async () => { await signOut(); navigate("/"); }}
+              className="text-sm font-medium text-red-400/70 hover:text-red-400 transition-colors"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -302,6 +310,16 @@ export default function MyBookings() {
                               {formatTime(b.start_time)} – {formatTime(b.end_time)}
                             </div>
                             <div className="flex gap-2">
+                              {b.sport_id === 1 && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1 rounded-xl border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 hover:border-emerald-500/30 transition-all duration-200 bg-transparent"
+                                  onClick={() => navigate(`/create-match/${b.id}`)}
+                                >
+                                  <Gamepad2 className="h-3.5 w-3.5 mr-1" /> Match
+                                </Button>
+                              )}
                               <Button
                                 size="sm"
                                 variant="outline"

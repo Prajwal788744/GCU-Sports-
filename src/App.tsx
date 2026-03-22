@@ -13,6 +13,11 @@ import MyBookings from "./pages/MyBookings";
 import AdminPanel from "./pages/AdminPanel";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
+import CreateMatch from "./pages/CreateMatch";
+import TeamSetup from "./pages/TeamSetup";
+import Scoring from "./pages/Scoring";
+import LiveScore from "./pages/LiveScore";
+import MatchHistory from "./pages/MatchHistory";
 
 const queryClient = new QueryClient();
 
@@ -23,7 +28,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   const publicPaths = ["/", "/login", "/signup"];
-  const isPublic = publicPaths.includes(location.pathname);
+  const isPublic = publicPaths.includes(location.pathname) || location.pathname.startsWith("/live/");
 
   useEffect(() => {
     if (loading) return;
@@ -65,6 +70,12 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/booking/:sportId" element={<Booking />} />
             <Route path="/my-bookings" element={<MyBookings />} />
+            <Route path="/create-match/:bookingId" element={<CreateMatch />} />
+            <Route path="/create-match" element={<CreateMatch />} />
+            <Route path="/team-setup/:matchId" element={<TeamSetup />} />
+            <Route path="/scoring/:matchId" element={<Scoring />} />
+            <Route path="/live/:matchId" element={<LiveScore />} />
+            <Route path="/matches" element={<MatchHistory />} />
             <Route path="/admin" element={<AdminPanel />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

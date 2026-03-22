@@ -44,7 +44,7 @@ export default function LandingPage() {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
               <Trophy className="h-5 w-5" />
             </div>
-            <span className="tracking-tight">UniSports</span>
+            <span className="tracking-tight">GCU Sports</span>
           </div>
           <div className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Features</a>
@@ -188,7 +188,7 @@ export default function LandingPage() {
           <div className="text-center mb-16">
             <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-4 py-1.5 mb-4">
               <Star className="h-3.5 w-3.5 text-emerald-500" />
-              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Why UniSports</span>
+              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Why GCU Sports</span>
             </span>
             <h2 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight">
               Everything you need to book sports
@@ -360,7 +360,7 @@ export default function LandingPage() {
                 Ready to Book Your Slot?
               </h2>
               <p className="text-neutral-400 max-w-lg mx-auto mb-8">
-                Join 67+ active students already using UniSports. Your next game is just a click away.
+                Join 67+ active students already using GCU Sports. Your next game is just a click away.
               </p>
               <Button
                 size="lg"
@@ -384,7 +384,7 @@ export default function LandingPage() {
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                   <Trophy className="h-4 w-4" />
                 </div>
-                UniSports
+                GCU Sports
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 University Sports Slot Booking System. Making campus sports accessible for everyone.
@@ -416,7 +416,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t mt-10 pt-6 text-center text-xs text-muted-foreground">
-            © 2026 UniSports. All rights reserved.
+            © 2026 GCU Sports. All rights reserved.
           </div>
         </div>
       </footer>
