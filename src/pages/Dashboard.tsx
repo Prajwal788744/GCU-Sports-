@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
-import { ArrowRight, Trophy, Gamepad2, Eye, TrendingUp, XCircle, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Trophy, Gamepad2, Eye, TrendingUp, XCircle, CheckCircle2, User, MinusCircle } from "lucide-react";
 
 const sportMeta: Record<string, { icon: string; description: string; img: string }> = {
   Cricket: {
@@ -45,6 +45,7 @@ export default function Dashboard() {
   const userName = user?.user_metadata?.name || "Student";
   const [sports, setSports] = useState<Sport[]>([]);
   const [matches, setMatches] = useState<MatchRecord[]>([]);
+  const [userTeamName, setUserTeamName] = useState<string>("");
 
   useEffect(() => {
     supabase.from("sports").select("*").order("id").then(({ data }) => {
@@ -52,6 +53,11 @@ export default function Dashboard() {
     });
 
     if (user) {
+      // Fetch user's team name
+      supabase.from("users").select("team_name").eq("id", user.id).single().then(({ data }) => {
+        if (data?.team_name) setUserTeamName(data.team_name.toLowerCase().trim());
+      });
+
       supabase.from("matches")
         .select("id, team_a_name, team_b_name, winner, status, match_type, total_overs, created_at")
         .eq("created_by", user.id)
@@ -64,16 +70,6 @@ export default function Dashboard() {
   }, [user]);
 
   const totalMatches = matches.length;
-  // Collect all unique team names this user has used
-  const teamNames = new Set<string>();
-  matches.forEach((m) => { teamNames.add(m.team_a_name); teamNames.add(m.team_b_name); });
-
-  // For each match, determine if user's team won (pick the team that appears most frequently)
-  const teamFreq: Record<string, number> = {};
-  matches.forEach((m) => {
-    teamFreq[m.team_a_name] = (teamFreq[m.team_a_name] || 0) + 1;
-    teamFreq[m.team_b_name] = (teamFreq[m.team_b_name] || 0) + 1;
-  });
 
   const getMatchResult = (m: MatchRecord) => {
     if (m.winner === "tie") return "tie";
@@ -82,12 +78,26 @@ export default function Dashboard() {
     return winnerName;
   };
 
-  const wins = matches.filter((m) => {
+  // Check if the user's team won a given match
+  const isUserWin = (m: MatchRecord) => {
     if (m.winner === "tie" || !m.winner) return false;
-    return true; // user created the match, so any win counts
-  }).length;
+    const winnerTeam = m.winner === "A" ? m.team_a_name : m.team_b_name;
+    // Compare case-insensitively with user's team
+    if (userTeamName) {
+      return winnerTeam.toLowerCase().trim() === userTeamName;
+    }
+    // Fallback: assume user is team A (the first team they entered)
+    return m.winner === "A";
+  };
+
+  const isUserLoss = (m: MatchRecord) => {
+    if (m.winner === "tie" || !m.winner) return false;
+    return !isUserWin(m);
+  };
+
+  const wins = matches.filter(isUserWin).length;
+  const losses = matches.filter(isUserLoss).length;
   const ties = matches.filter((m) => m.winner === "tie").length;
-  const losses = 0; // In this context user creates matches, not individual player tracking
 
   return (
     <div className="min-h-screen bg-black/[0.96] text-white">
@@ -118,6 +128,12 @@ export default function Dashboard() {
               className="text-sm font-medium text-emerald-400/70 hover:text-emerald-400 transition-colors flex items-center gap-1"
             >
               <Gamepad2 className="h-3.5 w-3.5" /> Matches
+            </button>
+            <button
+              onClick={() => navigate("/profile")}
+              className="text-sm font-medium text-white/50 hover:text-white transition-colors flex items-center gap-1"
+            >
+              <User className="h-3.5 w-3.5" /> Profile
             </button>
             <button
               onClick={async () => { await signOut(); navigate("/"); }}
@@ -185,10 +201,11 @@ export default function Dashboard() {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-3 gap-4 mb-8">
+            <div className="grid grid-cols-4 gap-4 mb-8">
               {[
                 { label: "Played", value: totalMatches, icon: TrendingUp, color: "text-white" },
                 { label: "Wins", value: wins, icon: CheckCircle2, color: "text-emerald-400" },
+                { label: "Losses", value: losses, icon: MinusCircle, color: "text-red-400" },
                 { label: "Ties", value: ties, icon: XCircle, color: "text-amber-400" },
               ].map((stat) => (
                 <div key={stat.label} className="relative rounded-[1.25rem] border-[0.75px] border-white/[0.06] p-2">
@@ -229,7 +246,9 @@ export default function Dashboard() {
                       <span className={`inline-block text-xs font-bold px-2.5 py-1 rounded-full border ${
                         result === "tie"
                           ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                          : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                          : isUserWin(m)
+                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                          : "bg-red-500/10 text-red-400 border-red-500/20"
                       }`}>
                         {winnerName}
                       </span>
