@@ -35,7 +35,7 @@ export default function CreateMatch() {
       if (data && data.user_id !== user.id) {
         setAuthorized(false);
         toast.error("Only the person who booked can create a match");
-        setTimeout(() => navigate("/my-bookings"), 1500);
+        navigate("/my-bookings", { replace: true });
       }
     };
     checkOwnership();

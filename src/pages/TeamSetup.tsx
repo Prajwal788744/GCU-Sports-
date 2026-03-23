@@ -33,7 +33,7 @@ export default function TeamSetup() {
       if (data && data.created_by !== user.id) {
         setAuthorized(false);
         toast.error("Only the match creator can set up teams");
-        setTimeout(() => navigate(`/live/${numMatchId}`), 1500);
+        navigate(`/live/${numMatchId}`, { replace: true });
       } else {
         setAuthorized(true);
       }
@@ -95,12 +95,12 @@ export default function TeamSetup() {
       console.log(`[AutoPopulate] Looking for previous matches with team "${teamName}" (slot ${team})`);
       const [resA, resB] = await Promise.all([
         supabase.from("matches").select("id, team_a_name, team_b_name, created_at")
-          .eq("created_by", user.id).neq("id", numMatchId)
-          .eq("team_a_name", teamName)
+          .neq("id", numMatchId)
+          .ilike("team_a_name", teamName)
           .order("created_at", { ascending: false }).limit(1),
         supabase.from("matches").select("id, team_a_name, team_b_name, created_at")
-          .eq("created_by", user.id).neq("id", numMatchId)
-          .eq("team_b_name", teamName)
+          .neq("id", numMatchId)
+          .ilike("team_b_name", teamName)
           .order("created_at", { ascending: false }).limit(1),
       ]);
 

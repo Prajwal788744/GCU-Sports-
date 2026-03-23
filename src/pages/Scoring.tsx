@@ -59,7 +59,7 @@ export default function Scoring() {
       if (data && data.created_by !== user.id) {
         setAuthorized(false);
         toast.error("Only the match creator can score this game");
-        setTimeout(() => navigate(`/live/${numMatchId}`), 1500);
+        navigate(`/live/${numMatchId}`, { replace: true });
       } else {
         setAuthorized(true);
       }
