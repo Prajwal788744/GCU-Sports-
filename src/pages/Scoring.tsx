@@ -256,12 +256,9 @@ export default function Scoring() {
           batting_team: bowlingTeam,
           bowling_team: battingTeam,
         }).eq("id", numMatchId);
-        setStrikerId(null);
-        setNonStrikerId(null);
-        setBowlerId(null);
-        setSelectingBatsman("striker");
-        setDismissedIds([]);
         toast.success("Innings complete! Second innings starting.");
+        // Full reload to ensure all state (batting/bowling team, players, dismissed list) is fresh
+        window.location.reload();
       } else {
         // Match over
         const inn1 = innings.find((i) => i.innings_number === 1);
