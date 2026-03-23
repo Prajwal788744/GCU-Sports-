@@ -38,6 +38,7 @@ export default function Scoring() {
   const [players, setPlayers] = useState<MPlayer[]>([]);
   const [stats, setStats] = useState<PStats[]>([]);
   const [balls, setBalls] = useState<BallEvent[]>([]);
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
 
   // Current state
   const [strikerId, setStrikerId] = useState<number | null>(null);
@@ -49,6 +50,22 @@ export default function Scoring() {
 
   // End match
   const [showEndMatch, setShowEndMatch] = useState(false);
+
+  // Authorization check — only match creator can score
+  useEffect(() => {
+    if (!user) return;
+    const checkAuth = async () => {
+      const { data } = await supabase.from("matches").select("created_by").eq("id", numMatchId).single();
+      if (data && data.created_by !== user.id) {
+        setAuthorized(false);
+        toast.error("Only the match creator can score this game");
+        setTimeout(() => navigate(`/live/${numMatchId}`), 1500);
+      } else {
+        setAuthorized(true);
+      }
+    };
+    checkAuth();
+  }, [user, numMatchId]);
 
   const fetchAll = useCallback(async () => {
     const [matchRes, inningsRes, playersRes, statsRes, ballsRes] = await Promise.all([

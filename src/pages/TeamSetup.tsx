@@ -23,6 +23,23 @@ export default function TeamSetup() {
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [starting, setStarting] = useState(false);
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
+
+  // Authorization check — only match creator can set up teams
+  useEffect(() => {
+    if (!user) return;
+    const checkAuth = async () => {
+      const { data } = await supabase.from("matches").select("created_by").eq("id", numMatchId).single();
+      if (data && data.created_by !== user.id) {
+        setAuthorized(false);
+        toast.error("Only the match creator can set up teams");
+        setTimeout(() => navigate(`/live/${numMatchId}`), 1500);
+      } else {
+        setAuthorized(true);
+      }
+    };
+    checkAuth();
+  }, [user, numMatchId]);
 
   useEffect(() => {
     if (!user) return; // Wait for auth to resolve
