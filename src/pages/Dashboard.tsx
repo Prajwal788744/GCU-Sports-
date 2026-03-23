@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
-import { ArrowRight, Trophy } from "lucide-react";
+import { ArrowRight, Trophy, Gamepad2, Eye, TrendingUp, XCircle, CheckCircle2 } from "lucide-react";
 
 const sportMeta: Record<string, { icon: string; description: string; img: string }> = {
   Cricket: {
@@ -28,17 +28,66 @@ interface Sport {
   name: string;
 }
 
+interface MatchRecord {
+  id: number;
+  team_a_name: string;
+  team_b_name: string;
+  winner: string | null;
+  status: string;
+  match_type: string;
+  total_overs: number;
+  created_at: string;
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const userName = user?.user_metadata?.name || "Student";
   const [sports, setSports] = useState<Sport[]>([]);
+  const [matches, setMatches] = useState<MatchRecord[]>([]);
 
   useEffect(() => {
     supabase.from("sports").select("*").order("id").then(({ data }) => {
       if (data) setSports(data);
     });
-  }, []);
+
+    if (user) {
+      supabase.from("matches")
+        .select("id, team_a_name, team_b_name, winner, status, match_type, total_overs, created_at")
+        .eq("created_by", user.id)
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
+        .then(({ data }) => {
+          if (data) setMatches(data);
+        });
+    }
+  }, [user]);
+
+  const totalMatches = matches.length;
+  // Collect all unique team names this user has used
+  const teamNames = new Set<string>();
+  matches.forEach((m) => { teamNames.add(m.team_a_name); teamNames.add(m.team_b_name); });
+
+  // For each match, determine if user's team won (pick the team that appears most frequently)
+  const teamFreq: Record<string, number> = {};
+  matches.forEach((m) => {
+    teamFreq[m.team_a_name] = (teamFreq[m.team_a_name] || 0) + 1;
+    teamFreq[m.team_b_name] = (teamFreq[m.team_b_name] || 0) + 1;
+  });
+
+  const getMatchResult = (m: MatchRecord) => {
+    if (m.winner === "tie") return "tie";
+    if (!m.winner) return "unknown";
+    const winnerName = m.winner === "A" ? m.team_a_name : m.team_b_name;
+    return winnerName;
+  };
+
+  const wins = matches.filter((m) => {
+    if (m.winner === "tie" || !m.winner) return false;
+    return true; // user created the match, so any win counts
+  }).length;
+  const ties = matches.filter((m) => m.winner === "tie").length;
+  const losses = 0; // In this context user creates matches, not individual player tracking
 
   return (
     <div className="min-h-screen bg-black/[0.96] text-white">
@@ -63,6 +112,12 @@ export default function Dashboard() {
               className="text-sm font-medium text-white/50 hover:text-white transition-colors"
             >
               My Bookings
+            </button>
+            <button
+              onClick={() => navigate("/matches")}
+              className="text-sm font-medium text-emerald-400/70 hover:text-emerald-400 transition-colors flex items-center gap-1"
+            >
+              <Gamepad2 className="h-3.5 w-3.5" /> Matches
             </button>
             <button
               onClick={async () => { await signOut(); navigate("/"); }}
@@ -117,6 +172,82 @@ export default function Dashboard() {
             );
           })}
         </ul>
+
+        {/* My Matches Section */}
+        {matches.length > 0 && (
+          <div className="mt-14 animate-fade-up" style={{ animationDelay: "0.3s" }}>
+            <div className="flex items-center gap-3 mb-6">
+              <Gamepad2 className="h-7 w-7 text-emerald-400" />
+              <h2 className="text-2xl font-extrabold tracking-tight">My Matches</h2>
+              <span className="ml-1 inline-flex items-center justify-center h-7 min-w-7 px-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-bold">
+                {totalMatches}
+              </span>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-3 gap-4 mb-8">
+              {[
+                { label: "Played", value: totalMatches, icon: TrendingUp, color: "text-white" },
+                { label: "Wins", value: wins, icon: CheckCircle2, color: "text-emerald-400" },
+                { label: "Ties", value: ties, icon: XCircle, color: "text-amber-400" },
+              ].map((stat) => (
+                <div key={stat.label} className="relative rounded-[1.25rem] border-[0.75px] border-white/[0.06] p-2">
+                  <GlowingEffect spread={30} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={2} />
+                  <div className="relative rounded-xl border-[0.75px] border-white/[0.06] bg-white/[0.03] p-5 text-center">
+                    <stat.icon className={`h-5 w-5 mx-auto mb-2 ${stat.color}`} />
+                    <div className={`text-3xl font-black ${stat.color}`}>{stat.value}</div>
+                    <div className="text-xs text-white/40 font-semibold mt-1">{stat.label}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Match History Table */}
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+              <div className="grid grid-cols-4 text-[10px] font-bold text-white/30 uppercase px-5 py-3 border-b border-white/[0.04]">
+                <span className="col-span-1">Teams</span>
+                <span className="text-center">Type</span>
+                <span className="text-center">Result</span>
+                <span className="text-right">Action</span>
+              </div>
+              {matches.map((m) => {
+                const result = getMatchResult(m);
+                const winnerName = result === "tie" ? "Tied" : result === "unknown" ? "—" : `${result} won`;
+                const date = new Date(m.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                return (
+                  <div key={m.id} className="grid grid-cols-4 items-center px-5 py-3.5 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.02] transition-colors">
+                    <div className="col-span-1">
+                      <p className="text-sm font-semibold text-white/80 truncate">
+                        {m.team_a_name} <span className="text-white/30">vs</span> {m.team_b_name}
+                      </p>
+                      <p className="text-[10px] text-white/30 mt-0.5">{date}</p>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-xs text-white/40 font-medium">{m.match_type} · {m.total_overs}ov</span>
+                    </div>
+                    <div className="text-center">
+                      <span className={`inline-block text-xs font-bold px-2.5 py-1 rounded-full border ${
+                        result === "tie"
+                          ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                          : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                      }`}>
+                        {winnerName}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <button
+                        onClick={() => navigate(`/live/${m.id}`)}
+                        className="text-xs text-emerald-400/70 hover:text-emerald-400 transition-colors font-semibold flex items-center gap-1 ml-auto"
+                      >
+                        <Eye className="h-3 w-3" /> View
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { toast } from "sonner";
-import { X, ArrowRightLeft, Clock, CalendarCheck, Trophy, ArrowLeft, AlertTriangle, Gamepad2, Eye } from "lucide-react";
+import { X, ArrowRightLeft, Clock, CalendarCheck, Trophy, ArrowLeft, AlertTriangle, Gamepad2, Eye, Gamepad } from "lucide-react";
 import { format, addDays } from "date-fns";
 
 const sportNames: Record<number, { name: string; icon: string }> = {
@@ -72,7 +72,7 @@ export default function MyBookings() {
   const { user, signOut } = useAuth();
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [matchStatuses, setMatchStatuses] = useState<Record<number, { matchId: number; status: string }>>({});
+  const [matchStatuses, setMatchStatuses] = useState<Record<number, { matchId: number; status: string; teamA: string; teamB: string; winner: string | null }>>({});
 
   // Postpone modal state
   const [postponeBooking, setPostponeBooking] = useState<BookingRow | null>(null);
@@ -98,15 +98,14 @@ export default function MyBookings() {
       if (cricketBookingIds.length > 0) {
         const { data: matches } = await supabase
           .from("matches")
-          .select("id, booking_id, status")
+          .select("id, booking_id, status, team_a_name, team_b_name, winner")
           .in("booking_id", cricketBookingIds);
         if (matches) {
-          const statusMap: Record<number, { matchId: number; status: string }> = {};
+          const statusMap: Record<number, { matchId: number; status: string; teamA: string; teamB: string; winner: string | null }> = {};
           for (const m of matches) {
             if (m.booking_id) {
-              // Keep the most recent / most relevant match per booking
               if (!statusMap[m.booking_id] || m.status === "completed" || m.status === "ongoing") {
-                statusMap[m.booking_id] = { matchId: m.id, status: m.status };
+                statusMap[m.booking_id] = { matchId: m.id, status: m.status, teamA: m.team_a_name, teamB: m.team_b_name, winner: m.winner };
               }
             }
           }
@@ -244,7 +243,8 @@ export default function MyBookings() {
   const isMatchCompleted = (bookingId: number) => matchStatuses[bookingId]?.status === "completed";
 
   const activeBookings = bookings.filter((b) => b.status === "booked" && !isMatchCompleted(b.id));
-  const pastBookings = bookings.filter((b) => b.status !== "booked" || isMatchCompleted(b.id));
+  const completedBookings = bookings.filter((b) => isMatchCompleted(b.id));
+  const pastBookings = bookings.filter((b) => b.status !== "booked" && !isMatchCompleted(b.id));
 
   return (
     <div className="min-h-screen bg-black/[0.96] text-white">
@@ -397,6 +397,68 @@ export default function MyBookings() {
               </div>
             )}
 
+            {/* Completed Matches */}
+            {completedBookings.length > 0 && (
+              <div className="mb-10 animate-fade-up" style={{ animationDelay: "0.15s" }}>
+                <h3 className="text-sm font-bold text-emerald-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <Trophy className="h-3.5 w-3.5" /> Completed Matches
+                </h3>
+                <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {completedBookings.map((b) => {
+                    const sportInfo = sportNames[b.sport_id] || { name: "Sport", icon: "🏅" };
+                    const matchInfo = matchStatuses[b.id];
+                    const winnerName = matchInfo?.winner === "A" ? matchInfo.teamA : matchInfo?.winner === "B" ? matchInfo.teamB : matchInfo?.winner === "tie" ? "Tie" : "";
+                    return (
+                      <li key={b.id} className="list-none">
+                        <div className="relative rounded-[1.25rem] border-[0.75px] border-emerald-500/10 p-2 md:p-3">
+                          <GlowingEffect spread={30} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={2} />
+                          <div className="relative rounded-xl border-[0.75px] border-emerald-500/10 bg-emerald-500/[0.02] p-5">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xl">{sportInfo.icon}</span>
+                                <span className="font-bold text-white">{sportInfo.name}</span>
+                              </div>
+                              <span className="inline-block rounded-full px-3 py-1 text-xs font-bold border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                                Completed
+                              </span>
+                            </div>
+                            {matchInfo && (
+                              <div className="mb-3">
+                                <p className="text-sm font-bold text-white/80">
+                                  {matchInfo.teamA} <span className="text-white/30">vs</span> {matchInfo.teamB}
+                                </p>
+                                {winnerName && (
+                                  <p className="text-xs text-emerald-400/80 mt-1 flex items-center gap-1">
+                                    <Trophy className="h-3 w-3" /> {winnerName === "Tie" ? "Match Tied" : `${winnerName} won`}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1.5 text-sm text-white/40 mb-1">
+                              <CalendarCheck className="h-3.5 w-3.5" />
+                              {formatDate(b.date)}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-sm text-white/40 mb-3">
+                              <Clock className="h-3.5 w-3.5" />
+                              {formatTime(b.start_time)} – {formatTime(b.end_time)}
+                            </div>
+                            {matchInfo && (
+                              <button
+                                onClick={() => navigate(`/live/${matchInfo.matchId}`)}
+                                className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 transition-colors font-semibold"
+                              >
+                                <Eye className="h-3.5 w-3.5" /> View Scorecard →
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
             {/* Past / Cancelled / Postponed */}
             {pastBookings.length > 0 && (
               <div className="animate-fade-up" style={{ animationDelay: "0.2s" }}>
@@ -404,8 +466,6 @@ export default function MyBookings() {
                 <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {pastBookings.map((b) => {
                     const sportInfo = sportNames[b.sport_id] || { name: "Sport", icon: "🏅" };
-                    const completed = isMatchCompleted(b.id);
-                    const matchInfo = matchStatuses[b.id];
                     return (
                       <li key={b.id} className="list-none">
                         <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4 opacity-60 hover:opacity-80 transition-opacity">
@@ -414,25 +474,13 @@ export default function MyBookings() {
                               <span>{sportInfo.icon}</span>
                               <span className="font-semibold text-white/60 text-sm">{sportInfo.name}</span>
                             </div>
-                            <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${
-                              completed
-                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                                : getStatusStyles(b.status)
-                            }`}>
-                              {completed ? "Match Done" : b.status}
+                            <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${getStatusStyles(b.status)}`}>
+                              {b.status}
                             </span>
                           </div>
                           <div className="text-xs text-white/30">
                             {formatDate(b.date)} · {formatTime(b.start_time)} – {formatTime(b.end_time)}
                           </div>
-                          {completed && matchInfo && (
-                            <button
-                              onClick={() => navigate(`/live/${matchInfo.matchId}`)}
-                              className="mt-3 flex items-center gap-1.5 text-xs text-emerald-400/70 hover:text-emerald-400 transition-colors font-semibold"
-                            >
-                              <Eye className="h-3 w-3" /> View Scorecard →
-                            </button>
-                          )}
                         </div>
                       </li>
                     );

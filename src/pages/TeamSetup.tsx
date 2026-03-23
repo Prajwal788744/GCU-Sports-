@@ -73,19 +73,24 @@ export default function TeamSetup() {
     let loaded = 0;
 
     for (const [teamName, team] of [[teamAName, "A"], [teamBName, "B"]] as const) {
-      // Find the most recent match (by this user) with the same team name in position A or B
-      const { data: prevMatches } = await supabase
-        .from("matches")
-        .select("id, team_a_name, team_b_name")
-        .eq("created_by", user.id)
-        .neq("id", numMatchId)
-        .or(`team_a_name.eq.${teamName},team_b_name.eq.${teamName}`)
-        .order("created_at", { ascending: false })
-        .limit(1);
+      // Find the most recent match (by this user) with the same team name
+      // Use two separate queries instead of .or() to avoid issues with spaces in team names
+      const [resA, resB] = await Promise.all([
+        supabase.from("matches").select("id, team_a_name, team_b_name, created_at")
+          .eq("created_by", user.id).neq("id", numMatchId)
+          .eq("team_a_name", teamName)
+          .order("created_at", { ascending: false }).limit(1),
+        supabase.from("matches").select("id, team_a_name, team_b_name, created_at")
+          .eq("created_by", user.id).neq("id", numMatchId)
+          .eq("team_b_name", teamName)
+          .order("created_at", { ascending: false }).limit(1),
+      ]);
 
-      if (!prevMatches || prevMatches.length === 0) continue;
-
-      const prevMatch = prevMatches[0];
+      // Pick the most recent from either query
+      const candidates = [...(resA.data || []), ...(resB.data || [])];
+      if (candidates.length === 0) continue;
+      candidates.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      const prevMatch = candidates[0];
       // Figure out which team side the name was on in the previous match
       const prevTeamSide = prevMatch.team_a_name === teamName ? "A" : "B";
 
