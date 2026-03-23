@@ -25,6 +25,7 @@ export default function TeamSetup() {
   const [starting, setStarting] = useState(false);
 
   useEffect(() => {
+    if (!user) return; // Wait for auth to resolve
     const init = async () => {
       const { data } = await supabase.from("matches").select("*").eq("id", numMatchId).single();
       if (!data) return;
@@ -60,12 +61,13 @@ export default function TeamSetup() {
       setMatchPlayers(current);
 
       // Auto-populate from previous matches if no players yet
-      if (current.length === 0 && user) {
+      if (current.length === 0) {
+        console.log("[TeamSetup] No players found, auto-populating for teams:", data.team_a_name, data.team_b_name);
         await autoPopulateFromPreviousMatches(data.team_a_name, data.team_b_name);
       }
     };
     init();
-  }, [numMatchId]);
+  }, [numMatchId, user]);
 
   // Search previous matches for same team names and auto-fill players
   const autoPopulateFromPreviousMatches = async (teamAName: string, teamBName: string) => {
@@ -73,8 +75,7 @@ export default function TeamSetup() {
     let loaded = 0;
 
     for (const [teamName, team] of [[teamAName, "A"], [teamBName, "B"]] as const) {
-      // Find the most recent match (by this user) with the same team name
-      // Use two separate queries instead of .or() to avoid issues with spaces in team names
+      console.log(`[AutoPopulate] Looking for previous matches with team "${teamName}" (slot ${team})`);
       const [resA, resB] = await Promise.all([
         supabase.from("matches").select("id, team_a_name, team_b_name, created_at")
           .eq("created_by", user.id).neq("id", numMatchId)
@@ -86,24 +87,25 @@ export default function TeamSetup() {
           .order("created_at", { ascending: false }).limit(1),
       ]);
 
-      // Pick the most recent from either query
+      console.log(`[AutoPopulate] Query results - teamA matches:`, resA.data, resA.error, `teamB matches:`, resB.data, resB.error);
+
       const candidates = [...(resA.data || []), ...(resB.data || [])];
-      if (candidates.length === 0) continue;
+      if (candidates.length === 0) { console.log(`[AutoPopulate] No previous match found for "${teamName}"`); continue; }
       candidates.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       const prevMatch = candidates[0];
-      // Figure out which team side the name was on in the previous match
       const prevTeamSide = prevMatch.team_a_name === teamName ? "A" : "B";
+      console.log(`[AutoPopulate] Found match #${prevMatch.id}, team was on side ${prevTeamSide}`);
 
-      // Fetch that team's players from the previous match
-      const { data: prevPlayers } = await supabase
+      const { data: prevPlayers, error: playersError } = await supabase
         .from("match_players")
         .select("player_id, is_captain, players(id, name)")
         .eq("match_id", prevMatch.id)
         .eq("team", prevTeamSide);
 
+      console.log(`[AutoPopulate] Previous players:`, prevPlayers, playersError);
+
       if (!prevPlayers || prevPlayers.length === 0) continue;
 
-      // Insert each player into the current match
       const newPlayers: MatchPlayer[] = [];
       for (const pp of prevPlayers) {
         const playerData = (pp as any).players;
@@ -116,7 +118,9 @@ export default function TeamSetup() {
           is_captain: pp.is_captain || false,
         });
 
-        if (!error) {
+        if (error) {
+          console.error(`[AutoPopulate] Insert error for player ${playerData.name}:`, error);
+        } else {
           newPlayers.push({
             player_id: pp.player_id,
             team: team,
@@ -134,6 +138,8 @@ export default function TeamSetup() {
 
     if (loaded > 0) {
       toast.success(`Auto-loaded ${loaded} players from previous matches!`);
+    } else {
+      console.log("[AutoPopulate] No players were loaded");
     }
   };
 
