@@ -392,12 +392,16 @@ export default function Scoring() {
         {/* Batsman / Bowler Selection Modal */}
         {(selectingBatsman || selectingBowler) && (
           <div className="mb-6 rounded-2xl border border-amber-500/20 bg-amber-500/[0.05] p-5 animate-fade-up">
-            <h3 className="text-sm font-bold text-amber-400 mb-3">
+            <h3 className="text-sm font-bold text-amber-400 mb-1">
               {selectingBatsman ? `Select ${selectingBatsman === "striker" ? "Striker" : "Non-Striker"}` : "Select Bowler"}
             </h3>
+            <p className="text-xs text-white/40 mb-3 font-semibold">
+              {selectingBowler ? `from ${teamName(bowlingTeam)}` : `from ${teamName(battingTeam)}`}
+            </p>
             <div className="grid grid-cols-2 gap-2">
               {(selectingBowler ? bowlingPlayers : battingPlayers.filter((p) => p.player_id !== strikerId && p.player_id !== nonStrikerId)).map((p) => {
                 const isDismissed = !selectingBowler && dismissedIds.includes(p.player_id);
+                const pStats = getStats(p.player_id);
                 return (
                   <button
                     key={p.player_id}
@@ -417,16 +421,28 @@ export default function Scoring() {
                         setSelectingBowler(false);
                       }
                     }}
-                    className={`rounded-xl border px-3 py-3 text-sm font-medium transition-all text-left flex items-center gap-2 ${
+                    className={`rounded-xl border px-3 py-3 text-sm font-medium transition-all text-left ${
                       isDismissed
                         ? "bg-red-500/10 border-red-500/20 text-red-400/70 cursor-not-allowed opacity-60"
                         : "bg-white/[0.04] border-white/[0.06] text-white/80 hover:bg-emerald-500/10 hover:border-emerald-500/20"
                     }`}
                   >
-                    {isDismissed && <XCircle className="h-3.5 w-3.5 text-red-400 flex-shrink-0" />}
-                    <span className={isDismissed ? "line-through" : ""}>{p.name}</span>
-                    {p.is_captain && <span className="text-amber-400 ml-1 text-[10px]">(C)</span>}
-                    {isDismissed && <span className="text-[10px] text-red-400/60 ml-auto">OUT</span>}
+                    <div className="flex items-center gap-2">
+                      {isDismissed && <XCircle className="h-3.5 w-3.5 text-red-400 flex-shrink-0" />}
+                      <span className={isDismissed ? "line-through" : ""}>{p.name}</span>
+                      {p.is_captain && <span className="text-amber-400 ml-1 text-[10px]">(C)</span>}
+                      {isDismissed && <span className="text-[10px] text-red-400/60 ml-auto">OUT</span>}
+                    </div>
+                    {selectingBowler && pStats && (
+                      <div className="text-[10px] text-white/30 mt-1">
+                        {getBowlerOvers(p.player_id)} ov · {pStats.wickets_taken}W · {pStats.runs_conceded}R
+                      </div>
+                    )}
+                    {!selectingBowler && !isDismissed && pStats && (pStats.runs_scored > 0 || pStats.balls_faced > 0) && (
+                      <div className="text-[10px] text-white/30 mt-1">
+                        {pStats.runs_scored}({pStats.balls_faced}) · {pStats.fours}×4 {pStats.sixes}×6
+                      </div>
+                    )}
                   </button>
                 );
               })}
@@ -521,6 +537,94 @@ export default function Scoring() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Live Scorecard */}
+        {stats.length > 0 && (
+          <div className="mt-8 space-y-6 animate-fade-up" style={{ animationDelay: "0.2s" }}>
+            {/* Batting Scorecard */}
+            <div>
+              <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                🏏 Batting — {teamName(battingTeam)}
+              </h4>
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+                <div className="grid grid-cols-7 text-[10px] font-bold text-white/30 uppercase px-3 py-2 border-b border-white/[0.04]">
+                  <span className="col-span-2">Batter</span>
+                  <span className="text-center">R</span>
+                  <span className="text-center">B</span>
+                  <span className="text-center">4s</span>
+                  <span className="text-center">6s</span>
+                  <span className="text-center">SR</span>
+                </div>
+                {battingPlayers.map((p) => {
+                  const s = getStats(p.player_id);
+                  if (!s) return null;
+                  const isDismissed = dismissedIds.includes(p.player_id);
+                  const isOnStrike = p.player_id === strikerId;
+                  const sr = s.balls_faced > 0 ? ((s.runs_scored / s.balls_faced) * 100).toFixed(1) : "0.0";
+                  return (
+                    <div key={p.player_id} className={`grid grid-cols-7 text-sm px-3 py-2 border-b border-white/[0.02] last:border-0 ${
+                      isDismissed ? "bg-red-500/[0.03]" : isOnStrike ? "bg-emerald-500/[0.05]" : ""
+                    }`}>
+                      <span className={`col-span-2 font-medium truncate flex items-center gap-1 ${
+                        isDismissed ? "text-red-400/60 line-through" : isOnStrike ? "text-emerald-400" : "text-white/70"
+                      }`}>
+                        {p.name}
+                        {p.is_captain && <span className="text-amber-400 text-[9px]">(C)</span>}
+                        {isOnStrike && <span className="text-emerald-400 text-[9px]">*</span>}
+                      </span>
+                      <span className={`text-center font-bold ${isDismissed ? "text-red-400/60" : "text-white"}`}>{s.runs_scored}</span>
+                      <span className="text-center text-white/40">{s.balls_faced}</span>
+                      <span className="text-center text-blue-400/70">{s.fours}</span>
+                      <span className="text-center text-purple-400/70">{s.sixes}</span>
+                      <span className="text-center text-white/30 text-xs">{sr}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Bowling Scorecard */}
+            <div>
+              <h4 className="text-xs font-bold text-red-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                ⚾ Bowling — {teamName(bowlingTeam)}
+              </h4>
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+                <div className="grid grid-cols-6 text-[10px] font-bold text-white/30 uppercase px-3 py-2 border-b border-white/[0.04]">
+                  <span className="col-span-2">Bowler</span>
+                  <span className="text-center">Ov</span>
+                  <span className="text-center">R</span>
+                  <span className="text-center">W</span>
+                  <span className="text-center">Econ</span>
+                </div>
+                {bowlingPlayers.map((p) => {
+                  const s = getStats(p.player_id);
+                  if (!s || (s.runs_conceded === 0 && s.wickets_taken === 0 && !bowlerBallCounts[p.player_id])) return null;
+                  const overs = getBowlerOvers(p.player_id);
+                  const totalBalls = bowlerBallCounts[p.player_id] || 0;
+                  const econ = totalBalls > 0 ? ((s.runs_conceded / totalBalls) * 6).toFixed(1) : "0.0";
+                  const isCurrentBowler = p.player_id === bowlerId;
+                  return (
+                    <div key={p.player_id} className={`grid grid-cols-6 text-sm px-3 py-2 border-b border-white/[0.02] last:border-0 ${
+                      isCurrentBowler ? "bg-emerald-500/[0.05]" : ""
+                    }`}>
+                      <span className={`col-span-2 font-medium truncate flex items-center gap-1 ${
+                        isCurrentBowler ? "text-emerald-400" : "text-white/70"
+                      }`}>
+                        {p.name}
+                        {p.is_captain && <span className="text-amber-400 text-[9px]">(C)</span>}
+                        {isCurrentBowler && <span className="text-emerald-400 text-[9px]">*</span>}
+                      </span>
+                      <span className="text-center text-white/40">{overs}</span>
+                      <span className="text-center text-white/60">{s.runs_conceded}</span>
+                      <span className="text-center font-bold text-white">{s.wickets_taken}</span>
+                      <span className="text-center text-white/30 text-xs">{econ}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
