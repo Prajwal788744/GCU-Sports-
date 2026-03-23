@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
@@ -63,6 +63,24 @@ export default function Scoring() {
   const [showCaughtModal, setShowCaughtModal] = useState(false);
   const [selectedFielder, setSelectedFielder] = useState<number | null>(null);
   const [catchQuality, setCatchQuality] = useState<string>("good");
+
+  // Refs for dropdown click-outside detection
+  const noBallRef = useRef<HTMLDivElement>(null);
+  const wideRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showNoBallDropdown && noBallRef.current && !noBallRef.current.contains(e.target as Node)) {
+        setShowNoBallDropdown(false);
+      }
+      if (showWideDropdown && wideRef.current && !wideRef.current.contains(e.target as Node)) {
+        setShowWideDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showNoBallDropdown, showWideDropdown]);
 
   // Authorization check — only match creator can score
   useEffect(() => {
@@ -670,18 +688,18 @@ export default function Scoring() {
             {/* Extras — No Ball, Wide, Bonus */}
             <div>
               <h4 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Extras</h4>
-              <div className="grid grid-cols-3 gap-2 relative" style={{ zIndex: 60 }}>
+              <div className="grid grid-cols-3 gap-2">
                 {/* No Ball Dropdown */}
-                <div className="relative">
+                <div className="relative" ref={noBallRef}>
                   <button
                     disabled={processing}
-                    onClick={(e) => { e.stopPropagation(); setShowNoBallDropdown(!showNoBallDropdown); setShowWideDropdown(false); }}
+                    onClick={() => { setShowNoBallDropdown(!showNoBallDropdown); setShowWideDropdown(false); }}
                     className="w-full rounded-xl py-3 text-sm font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-all disabled:opacity-40 flex items-center justify-center gap-1"
                   >
                     No Ball <ChevronDown className="h-3.5 w-3.5" />
                   </button>
                   {showNoBallDropdown && (
-                    <div className="absolute top-full left-0 right-0 mt-1 rounded-xl border border-amber-500/20 bg-black/95 backdrop-blur-xl overflow-hidden shadow-lg shadow-amber-500/10" style={{ zIndex: 9999 }}>
+                    <div className="absolute top-full left-0 right-0 mt-1 rounded-xl border border-amber-500/20 bg-black/95 backdrop-blur-xl overflow-hidden shadow-lg shadow-amber-500/10 z-[9999]">
                       {[
                         { label: "No Ball", runs: 0 },
                         { label: "No Ball +1", runs: 1 },
@@ -689,7 +707,7 @@ export default function Scoring() {
                       ].map((opt) => (
                         <button
                           key={opt.label}
-                          onClick={(e) => { e.stopPropagation(); handleBall(opt.runs, "no_ball"); }}
+                          onClick={() => handleBall(opt.runs, "no_ball")}
                           className="w-full px-4 py-2.5 text-sm font-medium text-amber-400 hover:bg-amber-500/15 transition-colors text-left border-b border-amber-500/10 last:border-0"
                         >
                           {opt.label}
@@ -703,16 +721,16 @@ export default function Scoring() {
                 </div>
 
                 {/* Wide Dropdown */}
-                <div className="relative">
+                <div className="relative" ref={wideRef}>
                   <button
                     disabled={processing}
-                    onClick={(e) => { e.stopPropagation(); setShowWideDropdown(!showWideDropdown); setShowNoBallDropdown(false); }}
+                    onClick={() => { setShowWideDropdown(!showWideDropdown); setShowNoBallDropdown(false); }}
                     className="w-full rounded-xl py-3 text-sm font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-all disabled:opacity-40 flex items-center justify-center gap-1"
                   >
                     Wide <ChevronDown className="h-3.5 w-3.5" />
                   </button>
                   {showWideDropdown && (
-                    <div className="absolute top-full left-0 right-0 mt-1 rounded-xl border border-amber-500/20 bg-black/95 backdrop-blur-xl overflow-hidden shadow-lg shadow-amber-500/10" style={{ zIndex: 9999 }}>
+                    <div className="absolute top-full left-0 right-0 mt-1 rounded-xl border border-amber-500/20 bg-black/95 backdrop-blur-xl overflow-hidden shadow-lg shadow-amber-500/10 z-[9999]">
                       {[
                         { label: "Wide", runs: 0 },
                         { label: "Wide +1", runs: 1 },
@@ -720,7 +738,7 @@ export default function Scoring() {
                       ].map((opt) => (
                         <button
                           key={opt.label}
-                          onClick={(e) => { e.stopPropagation(); handleBall(opt.runs, "wide"); }}
+                          onClick={() => handleBall(opt.runs, "wide")}
                           className="w-full px-4 py-2.5 text-sm font-medium text-amber-400 hover:bg-amber-500/15 transition-colors text-left border-b border-amber-500/10 last:border-0"
                         >
                           {opt.label}
@@ -910,15 +928,6 @@ export default function Scoring() {
           </div>
         )}
       </main>
-
-      {/* Click outside to close dropdowns — uses portal-level z-index below dropdown */}
-      {(showNoBallDropdown || showWideDropdown) && (
-        <div
-          className="fixed inset-0"
-          style={{ zIndex: 55 }}
-          onClick={() => { setShowNoBallDropdown(false); setShowWideDropdown(false); }}
-        />
-      )}
     </div>
   );
 }
