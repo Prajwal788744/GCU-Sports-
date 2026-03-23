@@ -289,19 +289,17 @@ export default function TeamSetup() {
               <button
                 key={team}
                 onClick={() => { setSelectedTeam(team); nameRef.current?.focus(); }}
-                className={`rounded-xl px-4 py-4 text-left transition-all duration-200 border-2 ${
-                  selectedTeam === team
+                className={`rounded-xl px-4 py-4 text-left transition-all duration-200 border-2 ${selectedTeam === team
                     ? color === "blue"
                       ? "bg-blue-500/15 border-blue-500/40 shadow-lg shadow-blue-500/10"
                       : "bg-orange-500/15 border-orange-500/40 shadow-lg shadow-orange-500/10"
                     : "bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.05]"
-                }`}
+                  }`}
               >
-                <span className={`text-base font-bold block ${
-                  selectedTeam === team
+                <span className={`text-base font-bold block ${selectedTeam === team
                     ? color === "blue" ? "text-blue-400" : "text-orange-400"
                     : "text-white/60"
-                }`}>
+                  }`}>
                   {name}
                 </span>
                 <span className="text-xs text-white/30 mt-0.5 block">{count} players</span>
@@ -338,11 +336,10 @@ export default function TeamSetup() {
             <Button
               onClick={addPlayer}
               disabled={!newName.trim()}
-              className={`rounded-xl px-5 text-white font-semibold disabled:opacity-30 ${
-                selectedTeam === "A"
+              className={`rounded-xl px-5 text-white font-semibold disabled:opacity-30 ${selectedTeam === "A"
                   ? "bg-blue-500 hover:bg-blue-600"
                   : "bg-orange-500 hover:bg-orange-600"
-              }`}
+                }`}
             >
               <UserPlus className="h-4 w-4 sm:mr-1" />
               <span className="hidden sm:inline">Add</span>
@@ -383,9 +380,8 @@ export default function TeamSetup() {
                           )}
                           <button
                             onClick={() => toggleCaptain(mp.player_id, team)}
-                            className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ${
-                              mp.is_captain ? "text-amber-400 bg-amber-500/10" : "text-white/15 hover:text-amber-400 hover:bg-amber-500/10"
-                            }`}
+                            className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ${mp.is_captain ? "text-amber-400 bg-amber-500/10" : "text-white/15 hover:text-amber-400 hover:bg-amber-500/10"
+                              }`}
                             title="Set Captain"
                           >
                             <Star className="h-3.5 w-3.5" />
