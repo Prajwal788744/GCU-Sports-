@@ -60,7 +60,6 @@ export default function Dashboard() {
 
       supabase.from("matches")
         .select("id, team_a_name, team_b_name, winner, status, match_type, total_overs, created_at")
-        .eq("created_by", user.id)
         .eq("status", "completed")
         .order("created_at", { ascending: false })
         .then(({ data }) => {
