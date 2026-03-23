@@ -54,13 +54,14 @@ export default function LiveScore() {
 
   useEffect(() => { fetchAll(); }, [numMatchId]);
 
-  // Supabase Realtime — listen for new ball events, innings updates, match updates
+  // Supabase Realtime — listen for new ball events, innings updates, match updates, player stats
   useEffect(() => {
     const channel = supabase
       .channel(`live-match-${numMatchId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "ball_events", filter: `match_id=eq.${numMatchId}` }, () => fetchAll())
       .on("postgres_changes", { event: "*", schema: "public", table: "innings", filter: `match_id=eq.${numMatchId}` }, () => fetchAll())
       .on("postgres_changes", { event: "*", schema: "public", table: "matches", filter: `id=eq.${numMatchId}` }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "player_stats", filter: `match_id=eq.${numMatchId}` }, () => fetchAll())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [numMatchId]);
