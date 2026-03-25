@@ -1,6 +1,24 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import type { User, Session } from "@supabase/supabase-js";
+import { parseRegistrationNumber } from "@/lib/player-profile";
+
+async function syncUserProfile(authUser: User) {
+  const metadata = authUser.user_metadata || {};
+  const regMeta = parseRegistrationNumber(metadata.reg_no as string | undefined);
+
+  await supabase.from("users").upsert(
+    {
+      id: authUser.id,
+      email: authUser.email ?? null,
+      name: (metadata.name as string | undefined) || null,
+      reg_no: regMeta.normalizedRegNo || null,
+      registration_year: regMeta.registrationYear,
+      course_code: regMeta.courseCode,
+    },
+    { onConflict: "id" }
+  );
+}
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -22,10 +40,11 @@ export function useAuth() {
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
+        await syncUserProfile(session.user);
         fetchRole(session.user.id);
       }
       setLoading(false);
@@ -35,14 +54,17 @@ export function useAuth() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchRole(session.user.id);
-      } else {
-        setRole("user");
-      }
-      setLoading(false);
+      void (async () => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await syncUserProfile(session.user);
+          fetchRole(session.user.id);
+        } else {
+          setRole("user");
+        }
+        setLoading(false);
+      })();
     });
 
     return () => subscription.unsubscribe();
@@ -61,6 +83,12 @@ export function useAuth() {
       },
     });
     // Also update team_name in users table if provided
+    if (!error && data.user) {
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem("gcu_pending_onboarding_user", data.user.id);
+      }
+      await syncUserProfile(data.user);
+    }
     if (!error && data.user && metadata.team_name) {
       await supabase.from("users").update({ team_name: metadata.team_name }).eq("id", data.user.id);
     }

@@ -245,15 +245,21 @@ export default function MyBookings() {
     ];
     if (all.length < 4) return toast.error("Not enough players to start match");
 
-    const ensurePlayerIds: { player_id: number; team: string; is_captain: boolean }[] = [];
-    for (const p of all) {
-      let { data: row } = await supabase.from("players").select("id").eq("user_id", p.user_id).single();
-      if (!row) {
-        const created = await supabase.from("players").insert({ user_id: p.user_id, name: p.users?.name || "Player" }).select("id").single();
-        row = created.data as any;
-      }
-      if (row?.id) ensurePlayerIds.push({ player_id: row.id, team: p.team, is_captain: !!p.is_captain });
+    const uniqueUserIds = Array.from(new Set(all.map((player) => player.user_id)));
+    const { data: playerRows } = await supabase.from("players").select("id, user_id").in("user_id", uniqueUserIds);
+    const playerIdMap = new Map((playerRows || []).map((row: any) => [row.user_id, row.id]));
+    const missingPlayers = uniqueUserIds.filter((playerId) => !playerIdMap.has(playerId));
+    if (missingPlayers.length > 0) {
+      return toast.error("Every player must sign in and complete onboarding once before a match can start.");
     }
+
+    const ensurePlayerIds: { player_id: number; team: string; is_captain: boolean }[] = all
+      .map((player) => ({
+        player_id: playerIdMap.get(player.user_id),
+        team: player.team,
+        is_captain: !!player.is_captain,
+      }))
+      .filter((entry): entry is { player_id: number; team: string; is_captain: boolean } => typeof entry.player_id === "number");
 
     const { error: mpErr } = await supabase.from("match_players").insert(
       ensurePlayerIds.map((e) => ({ match_id: match.id, player_id: e.player_id, team: e.team, is_captain: e.is_captain }))
@@ -537,7 +543,7 @@ export default function MyBookings() {
                                   className="flex-1 rounded-xl border-blue-500/20 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300 hover:border-blue-500/30 transition-all duration-200 bg-transparent"
                                   onClick={() => navigate(`/booking-team/${b.id}`)}
                                 >
-                                  <Users className="h-3.5 w-3.5 mr-1" /> Create My Team
+                                  <Users className="h-3.5 w-3.5 mr-1" /> Add Players
                                 </Button>
                               )}
                               {b.sport_id === 1 && b.user_id === user?.id && (

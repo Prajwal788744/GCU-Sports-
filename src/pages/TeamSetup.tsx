@@ -232,28 +232,17 @@ export default function TeamSetup() {
     if (!user) return;
     if (!selectedUser.name) return toast.error("Invalid user");
 
-    let playerId: number | null = null;
     const { data: existingPlayer } = await supabase
       .from("players")
       .select("id")
       .eq("user_id", selectedUser.id)
-      .single();
+      .maybeSingle();
 
-    if (existingPlayer?.id) {
-      playerId = existingPlayer.id;
-    } else {
-      const { data: createdPlayer, error: createErr } = await supabase
-        .from("players")
-        .insert({
-          user_id: selectedUser.id,
-          name: selectedUser.name,
-          phone: null,
-        })
-        .select("id")
-        .single();
-      if (createErr || !createdPlayer) return toast.error(createErr?.message || "Failed to create player profile");
-      playerId = createdPlayer.id;
+    if (!existingPlayer?.id) {
+      return toast.error(`${selectedUser.name} needs to sign in and finish onboarding before joining matches.`);
     }
+
+    const playerId = existingPlayer.id;
 
     const alreadyInTeam = matchPlayers.find((mp) => mp.player_id === playerId);
     if (alreadyInTeam?.team === selectedTeam) {

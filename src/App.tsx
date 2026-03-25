@@ -1,10 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useNavigate, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import OnboardingDialog from "@/components/OnboardingDialog";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
@@ -31,6 +33,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
   const publicPaths = ["/", "/login", "/signup"];
   const isPublic = publicPaths.includes(location.pathname) || location.pathname.startsWith("/live/");
+  const isAuthPage = location.pathname === "/login" || location.pathname === "/signup";
 
   useEffect(() => {
     if (loading) return;
@@ -38,11 +41,15 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     if (!session && !isPublic) {
       // Not logged in trying to access protected route
       navigate("/login", { replace: true });
-    } else if (session && (location.pathname === "/login" || location.pathname === "/signup")) {
-      // Logged in but on auth pages → go to dashboard
+    } else if (session && location.pathname === "/login") {
+      // Logged in but on login page → go to dashboard
       navigate("/dashboard", { replace: true });
     }
   }, [session, loading, location.pathname, isPublic, navigate]);
+
+  if (session && isAuthPage && location.pathname === "/login") {
+    return null;
+  }
 
   if (loading) {
     return (
@@ -58,6 +65,68 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function OnboardingGate({ children }: { children: React.ReactNode }) {
+  const { session, user } = useAuth();
+  const location = useLocation();
+  const [checkingProfile, setCheckingProfile] = useState(false);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+
+  const shouldCheckOnboarding = location.pathname === "/dashboard";
+
+  useEffect(() => {
+    let active = true;
+
+    const checkOnboarding = async () => {
+      if (!session?.user || !shouldCheckOnboarding) {
+        if (active) {
+          setNeedsOnboarding(false);
+          setCheckingProfile(false);
+        }
+        return;
+      }
+
+      const pendingOnboardingUser =
+        typeof window !== "undefined" ? window.sessionStorage.getItem("gcu_pending_onboarding_user") : null;
+
+      if (pendingOnboardingUser !== session.user.id) {
+        if (active) {
+          setNeedsOnboarding(false);
+          setCheckingProfile(false);
+        }
+        return;
+      }
+
+      setCheckingProfile(true);
+      const { data, error } = await supabase
+        .from("users")
+        .select("onboarding_completed, role")
+        .eq("id", session.user.id)
+        .maybeSingle();
+
+      if (!active) return;
+
+      const shouldShow = !error && data ? data.role !== "admin" && data.onboarding_completed !== true : true;
+      setNeedsOnboarding(shouldShow);
+      setCheckingProfile(false);
+    };
+
+    void checkOnboarding();
+
+    return () => {
+      active = false;
+    };
+  }, [location.pathname, session?.user?.id, shouldCheckOnboarding]);
+
+  return (
+    <>
+      {children}
+      {user && shouldCheckOnboarding && !checkingProfile && needsOnboarding && (
+        <OnboardingDialog user={user} open={needsOnboarding} onComplete={() => setNeedsOnboarding(false)} />
+      )}
+    </>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -65,24 +134,26 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthGuard>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/booking/:sportId" element={<Booking />} />
-            <Route path="/my-bookings" element={<MyBookings />} />
-            <Route path="/create-match/:bookingId" element={<CreateMatch />} />
-            <Route path="/create-match" element={<CreateMatch />} />
-            <Route path="/team-setup/:matchId" element={<TeamSetup />} />
-            <Route path="/scoring/:matchId" element={<Scoring />} />
-            <Route path="/live/:matchId" element={<LiveScore />} />
-            <Route path="/matches" element={<MatchHistory />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/booking-team/:bookingId" element={<BookingTeamSetup />} />
-            <Route path="/admin" element={<AdminPanel />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <OnboardingGate>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/booking/:sportId" element={<Booking />} />
+              <Route path="/my-bookings" element={<MyBookings />} />
+              <Route path="/create-match/:bookingId" element={<CreateMatch />} />
+              <Route path="/create-match" element={<CreateMatch />} />
+              <Route path="/team-setup/:matchId" element={<TeamSetup />} />
+              <Route path="/scoring/:matchId" element={<Scoring />} />
+              <Route path="/live/:matchId" element={<LiveScore />} />
+              <Route path="/matches" element={<MatchHistory />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/booking-team/:bookingId" element={<BookingTeamSetup />} />
+              <Route path="/admin" element={<AdminPanel />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </OnboardingGate>
         </AuthGuard>
       </BrowserRouter>
     </TooltipProvider>

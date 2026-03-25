@@ -4,6 +4,13 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { Camera, Save, User, Hash, Users, Mail, Trophy, ArrowLeft, Gamepad2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  SPORT_META_BY_ID,
+  getSportProfileSummaryItems,
+  getSportProfileTeaser,
+  normalizeSportProfile,
+  type SportProfileRecord,
+} from "@/lib/player-profile";
 
 interface ProfileData {
   name: string;
@@ -12,6 +19,11 @@ interface ProfileData {
   team_name: string;
   avatar_url: string;
   department: string;
+  preferred_sport_id: number | null;
+  preferred_role: string;
+  registration_year: number | null;
+  course_code: string;
+  sport_profile: SportProfileRecord;
 }
 
 export default function Profile() {
@@ -20,7 +32,17 @@ export default function Profile() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [profile, setProfile] = useState<ProfileData>({
-    name: "", email: "", reg_no: "", team_name: "", avatar_url: "", department: "",
+    name: "",
+    email: "",
+    reg_no: "",
+    team_name: "",
+    avatar_url: "",
+    department: "",
+    preferred_sport_id: null,
+    preferred_role: "",
+    registration_year: null,
+    course_code: "",
+    sport_profile: {},
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -32,7 +54,7 @@ export default function Profile() {
     const fetchProfile = async () => {
       const { data } = await supabase
         .from("users")
-        .select("name, email, reg_no, team_name, avatar_url, department")
+        .select("name, email, reg_no, team_name, avatar_url, department, preferred_sport_id, preferred_role, registration_year, course_code, sport_profile")
         .eq("id", user.id)
         .single();
 
@@ -44,6 +66,11 @@ export default function Profile() {
           team_name: data.team_name || "",
           avatar_url: data.avatar_url || "",
           department: data.department || "",
+          preferred_sport_id: data.preferred_sport_id || null,
+          preferred_role: data.preferred_role || "",
+          registration_year: data.registration_year || null,
+          course_code: data.course_code || "",
+          sport_profile: normalizeSportProfile(data.sport_profile),
         });
         if (data.avatar_url) setAvatarPreview(data.avatar_url);
       }
@@ -109,6 +136,10 @@ export default function Profile() {
       </div>
     );
   }
+
+  const preferredSport = profile.preferred_sport_id ? SPORT_META_BY_ID[profile.preferred_sport_id] : null;
+  const athleteSummary = getSportProfileTeaser(profile.preferred_sport_id, profile.sport_profile, profile.preferred_role, 4);
+  const athleteDetails = getSportProfileSummaryItems(profile.preferred_sport_id, profile.sport_profile, profile.preferred_role);
 
   return (
     <div className="min-h-screen bg-black/[0.96] text-white">
@@ -235,6 +266,57 @@ export default function Profile() {
               disabled
               className="w-full rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-white/40 text-sm cursor-not-allowed"
             />
+          </div>
+
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/40">Athlete Profile</p>
+                <h2 className="mt-2 text-lg font-bold text-white">
+                  {preferredSport ? `${preferredSport.emoji} ${preferredSport.name}` : "Sport not selected"}
+                </h2>
+                <p className="mt-2 text-sm text-white/50">
+                  {athleteSummary || "Complete onboarding to build your athlete profile."}
+                </p>
+              </div>
+            </div>
+
+            {athleteDetails.length > 0 && (
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {athleteDetails.map((item) => (
+                  <div key={item.label} className="rounded-2xl border border-white/[0.06] bg-black/20 px-4 py-3">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/30">{item.label}</p>
+                    <p className="mt-2 text-sm font-semibold text-white">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
+                <Hash className="h-3.5 w-3.5" /> Registration Year
+              </label>
+              <input
+                type="text"
+                value={profile.registration_year ? profile.registration_year.toString() : ""}
+                disabled
+                className="w-full rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-white/40 text-sm cursor-not-allowed"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
+                <Hash className="h-3.5 w-3.5" /> Course Code
+              </label>
+              <input
+                type="text"
+                value={profile.course_code}
+                disabled
+                className="w-full rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-white/40 text-sm cursor-not-allowed"
+              />
+            </div>
           </div>
 
           {/* Team Name (read-only) */}

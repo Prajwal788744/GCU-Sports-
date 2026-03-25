@@ -9,7 +9,7 @@ import { toast } from "sonner";
 
 export default function Signup() {
   const navigate = useNavigate();
-  const { signUp } = useAuth();
+  const { signUp, user } = useAuth();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -17,9 +17,15 @@ export default function Signup() {
   const [regNo, setRegNo] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [allowPostSignupFlow, setAllowPostSignupFlow] = useState(false);
   const [step, setStep] = useState<"form" | "success">("form");
   const [initialCanvasVisible, setInitialCanvasVisible] = useState(true);
   const [reverseCanvasVisible, setReverseCanvasVisible] = useState(false);
+
+  useEffect(() => {
+    if (!user || isSubmitting || allowPostSignupFlow) return;
+    navigate("/dashboard", { replace: true });
+  }, [allowPostSignupFlow, isSubmitting, navigate, user]);
 
   // Validate reg_no: must contain both letters and numbers
   const isRegNoValid = (value: string) => /[a-zA-Z]/.test(value) && /[0-9]/.test(value);
@@ -64,13 +70,15 @@ export default function Signup() {
       return;
     }
 
+    setAllowPostSignupFlow(true);
+
     // Success animation
     setReverseCanvasVisible(true);
     setTimeout(() => setInitialCanvasVisible(false), 50);
     setStep("success");
 
     setTimeout(() => {
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     }, 1500);
   };
 

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Trophy, Circle, Wifi, Award, Zap } from "lucide-react";
+import { ArrowLeft, Trophy, Wifi, Award, Zap } from "lucide-react";
+import { formatRoleLabel, getSportProfileTeaser, normalizeSportProfile, type SportProfileRecord } from "@/lib/player-profile";
 
 interface MatchData {
   id: number; match_type: string; total_overs: number; status: string;
@@ -19,10 +20,43 @@ interface BallEvent {
   batsman_id: number; bowler_id: number; innings_id: number; created_at: string;
   is_free_hit?: boolean; caught_by?: number | null; catch_quality?: string | null;
 }
-interface MPlayer { player_id: number; team: string; is_captain: boolean; name: string; }
+interface MPlayer {
+  player_id: number;
+  team: string;
+  is_captain: boolean;
+  name: string;
+  role: string | null;
+  photo_url: string | null;
+  sport_profile: SportProfileRecord;
+}
 interface PStats {
   player_id: number; runs_scored: number; balls_faced: number;
   fours: number; sixes: number; wickets_taken: number; runs_conceded: number;
+}
+
+function PlayerChip({ player }: { player: MPlayer | undefined }) {
+  if (!player) return null;
+
+  return (
+    <div className="flex items-center gap-3 min-w-0">
+      {player.photo_url ? (
+        <img src={player.photo_url} alt={player.name} className="h-9 w-9 rounded-full object-cover border border-white/10" />
+      ) : (
+        <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-[10px] font-bold text-white/60">
+          {player.name.slice(0, 2).toUpperCase()}
+        </div>
+      )}
+      <div className="min-w-0">
+        <div className="truncate text-sm font-medium text-white/80">
+          {player.name}
+          {player.is_captain && <span className="ml-2 text-[10px] font-bold uppercase text-amber-400">C</span>}
+        </div>
+        <div className="truncate text-[11px] text-white/35">
+          {getSportProfileTeaser(1, player.sport_profile, player.role) || (player.role ? formatRoleLabel(player.role) : "Player")}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function LiveScore() {
@@ -41,14 +75,20 @@ export default function LiveScore() {
       supabase.from("matches").select("*").eq("id", numMatchId).single(),
       supabase.from("innings").select("*").eq("match_id", numMatchId).order("innings_number"),
       supabase.from("ball_events").select("*").eq("match_id", numMatchId).order("created_at", { ascending: false }),
-      supabase.from("match_players").select("player_id, team, is_captain, players(name)").eq("match_id", numMatchId),
+      supabase.from("match_players").select("player_id, team, is_captain, players(name, role, photo_url, sport_profile)").eq("match_id", numMatchId),
       supabase.from("player_stats").select("*").eq("match_id", numMatchId),
     ]);
     if (matchRes.data) setMatch(matchRes.data);
     if (inningsRes.data) setInnings(inningsRes.data);
     if (ballsRes.data) setBalls(ballsRes.data);
     if (playersRes.data) setPlayers(playersRes.data.map((p: any) => ({
-      player_id: p.player_id, team: p.team, is_captain: p.is_captain, name: p.players?.name || "?",
+      player_id: p.player_id,
+      team: p.team,
+      is_captain: p.is_captain,
+      name: p.players?.name || "?",
+      role: p.players?.role || null,
+      photo_url: p.players?.photo_url || null,
+      sport_profile: normalizeSportProfile(p.players?.sport_profile),
     })));
     if (statsRes.data) setStats(statsRes.data);
   };
@@ -75,6 +115,7 @@ export default function LiveScore() {
 
   const teamName = (t: string) => t === "A" ? match.team_a_name : match.team_b_name;
   const getPlayerName = (id: number) => players.find((p) => p.player_id === id)?.name || "?";
+  const getPlayer = (id: number) => players.find((p) => p.player_id === id);
   const motmName = match.man_of_match ? getPlayerName(match.man_of_match) : null;
 
   const currentInnings = innings.find((i) => i.innings_number === match.current_innings);
@@ -88,6 +129,8 @@ export default function LiveScore() {
     .filter((s) => players.find((p) => p.player_id === s.player_id)?.team !== (currentInnings?.team || "A"))
     .filter((s) => s.runs_conceded > 0 || s.wickets_taken > 0)
     .sort((a, b) => b.wickets_taken - a.wickets_taken);
+  const teamAPlayers = players.filter((player) => player.team === "A");
+  const teamBPlayers = players.filter((player) => player.team === "B");
 
   // Compute bowler ball counts from ball_events
   const bowlerBallCounts: Record<number, number> = {};
@@ -338,7 +381,9 @@ export default function LiveScore() {
               </div>
               {battingStats.filter((s) => s.balls_faced > 0 || s.runs_scored > 0).map((s) => (
                 <div key={s.player_id} className="grid grid-cols-5 text-sm px-4 py-2 border-b border-white/[0.02] last:border-0">
-                  <span className="col-span-2 font-medium text-white/70 truncate">{getPlayerName(s.player_id)}</span>
+                  <div className="col-span-2 min-w-0">
+                    <PlayerChip player={getPlayer(s.player_id)} />
+                  </div>
                   <span className="text-center font-bold text-white">{s.runs_scored}</span>
                   <span className="text-center text-white/40">{s.balls_faced}</span>
                   <span className="text-center text-white/40">{s.fours}/{s.sixes}</span>
@@ -363,10 +408,38 @@ export default function LiveScore() {
               </div>
               {bowlingStats.map((s) => (
                 <div key={s.player_id} className="grid grid-cols-5 text-sm px-4 py-2 border-b border-white/[0.02] last:border-0">
-                  <span className="col-span-2 font-medium text-white/70 truncate">{getPlayerName(s.player_id)}</span>
+                  <div className="col-span-2 min-w-0">
+                    <PlayerChip player={getPlayer(s.player_id)} />
+                  </div>
                   <span className="text-center text-white/40">{getBowlerOvers(s.player_id)}</span>
                   <span className="text-center font-bold text-white">{s.wickets_taken}</span>
                   <span className="text-center text-white/40">{s.runs_conceded}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {players.length > 0 && (
+          <div className="mb-6 animate-fade-up" style={{ animationDelay: "0.3s" }}>
+            <h4 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">Playing XI</h4>
+            <div className="grid gap-4 md:grid-cols-2">
+              {[
+                { team: "A", teamName: match.team_a_name, players: teamAPlayers },
+                { team: "B", teamName: match.team_b_name, players: teamBPlayers },
+              ].map((entry) => (
+                <div key={entry.team} className="rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+                  <div className="border-b border-white/[0.04] px-4 py-3">
+                    <p className="text-sm font-bold text-white">{entry.teamName}</p>
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-white/30">Cricket squad</p>
+                  </div>
+                  <div className="p-3 space-y-2">
+                    {entry.players.map((player) => (
+                      <div key={player.player_id} className="rounded-xl border border-white/[0.05] bg-white/[0.03] px-3 py-2.5">
+                        <PlayerChip player={player} />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
