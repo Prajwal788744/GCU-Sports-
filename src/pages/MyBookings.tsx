@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
+import { ensureBookingMatchStarted, getBookingMatchRoute } from "@/lib/booking-match";
 import { toast } from "sonner";
 import { X, ArrowRightLeft, Clock, CalendarCheck, Trophy, ArrowLeft, AlertTriangle, Gamepad2, Eye, Gamepad, Search, Users } from "lucide-react";
 import { format, addDays } from "date-fns";
@@ -134,7 +135,7 @@ export default function MyBookings() {
           .in("booking_id", cricketBookingIds);
         if (bookingTeams) {
           const countMap: Record<number, number> = {};
-          for (const bt of bookingTeams as any[]) {
+          for (const bt of bookingTeams as Array<{ booking_id: number; user_id: string }>) {
             countMap[bt.booking_id] = (countMap[bt.booking_id] || 0) + 1;
           }
           setBookingTeamsCount(countMap);
@@ -208,77 +209,13 @@ export default function MyBookings() {
   const startMatchFromSavedTeams = async (booking: BookingRow) => {
     if (!user) return;
     if (booking.user_id !== user.id) return toast.error("Only booking owner can start match");
-
-    const { data: bTeams, error: btErr } = await supabase
-      .from("booking_teams")
-      .select("team_id, user_id, is_owner, teams(name)")
-      .eq("booking_id", booking.id);
-    if (btErr || !bTeams || bTeams.length < 2) {
-      return toast.error("Both teams must be created before starting");
+    try {
+      const result = await ensureBookingMatchStarted(booking.id, user.id);
+      toast.success(result.created ? "Match started with saved teams." : "Opening the existing booking match.");
+      navigate(result.route);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to start the booking match.");
     }
-
-    const ownerTeam = (bTeams as any[]).find((t) => t.is_owner === true);
-    const oppTeam = (bTeams as any[]).find((t) => t.is_owner === false);
-    if (!ownerTeam || !oppTeam) return toast.error("Owner and opponent teams are required");
-
-    const { data: match, error: matchErr } = await supabase
-      .from("matches")
-      .insert({
-        booking_id: booking.id,
-        created_by: user.id,
-        sport_id: 1,
-        match_type: "T20",
-        total_overs: 20,
-        team_a_name: ownerTeam.teams?.name || "Team A",
-        team_b_name: oppTeam.teams?.name || "Team B",
-        status: "not_started",
-      })
-      .select("id")
-      .single();
-    if (matchErr || !match) return toast.error(matchErr?.message || "Failed to create match");
-
-    const { data: aPlayers } = await supabase.from("team_players").select("user_id, is_captain, users(name)").eq("team_id", ownerTeam.team_id);
-    const { data: bPlayers } = await supabase.from("team_players").select("user_id, is_captain, users(name)").eq("team_id", oppTeam.team_id);
-    const all = [
-      ...(aPlayers || []).map((p: any) => ({ ...p, team: "A" })),
-      ...(bPlayers || []).map((p: any) => ({ ...p, team: "B" })),
-    ];
-    if (all.length < 4) return toast.error("Not enough players to start match");
-
-    const uniqueUserIds = Array.from(new Set(all.map((player) => player.user_id)));
-    const { data: playerRows } = await supabase.from("players").select("id, user_id").in("user_id", uniqueUserIds);
-    const playerIdMap = new Map((playerRows || []).map((row: any) => [row.user_id, row.id]));
-    const missingPlayers = uniqueUserIds.filter((playerId) => !playerIdMap.has(playerId));
-    if (missingPlayers.length > 0) {
-      return toast.error("Every player must sign in and complete onboarding once before a match can start.");
-    }
-
-    const ensurePlayerIds: { player_id: number; team: string; is_captain: boolean }[] = all
-      .map((player) => ({
-        player_id: playerIdMap.get(player.user_id),
-        team: player.team,
-        is_captain: !!player.is_captain,
-      }))
-      .filter((entry): entry is { player_id: number; team: string; is_captain: boolean } => typeof entry.player_id === "number");
-
-    const { error: mpErr } = await supabase.from("match_players").insert(
-      ensurePlayerIds.map((e) => ({ match_id: match.id, player_id: e.player_id, team: e.team, is_captain: e.is_captain }))
-    );
-    if (mpErr) return toast.error(mpErr.message || "Failed to load teams into match");
-
-    const { error: statsErr } = await supabase.from("player_stats").insert(
-      ensurePlayerIds.map((e) => ({ match_id: match.id, player_id: e.player_id }))
-    );
-    if (statsErr) return toast.error(statsErr.message || "Failed to initialize stats");
-
-    await supabase.from("innings").insert([
-      { match_id: match.id, innings_number: 1, team: "A", status: "ongoing" },
-      { match_id: match.id, innings_number: 2, team: "B", status: "ongoing" },
-    ]);
-    await supabase.from("matches").update({ status: "ongoing", current_innings: 1, batting_team: "A", bowling_team: "B" }).eq("id", match.id);
-
-    toast.success("Match started with saved teams");
-    navigate(`/scoring/${match.id}`);
   };
 
   useEffect(() => {
@@ -521,13 +458,7 @@ export default function MyBookings() {
                                     }
                                     
                                     if (target) {
-                                      if (target.status === "completed") {
-                                        navigate(`/live/${target.id}`);
-                                      } else if (target.status === "ongoing") {
-                                        navigate(`/scoring/${target.id}`);
-                                      } else {
-                                        navigate(`/team-setup/${target.id}`);
-                                      }
+                                      navigate(getBookingMatchRoute(target.id, target.status));
                                     } else {
                                       navigate(`/create-match/${b.id}`);
                                     }

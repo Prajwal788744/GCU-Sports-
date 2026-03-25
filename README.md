@@ -64,6 +64,31 @@ This project is built with:
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
 
+## Environment variables
+
+This app requires the following variables at build/runtime:
+
+```sh
+VITE_SUPABASE_URL=your-supabase-project-url
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-or-publishable-key
+```
+
+Use `.env.example` as the template for local or hosted environments.
+
+## Hosting notes
+
+If the app works locally but fails after deployment, the two most common causes are:
+
+1. Missing `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in your hosting provider settings.
+2. Missing SPA route rewrites for React Router paths like `/dashboard`, `/matches`, or `/booking/1`.
+
+This repo now includes:
+
+- `vercel.json` for Vercel SPA rewrites
+- `netlify.toml` for Netlify SPA rewrites
+
+After setting env vars on the host, redeploy the app.
+
 ## Can I connect a custom domain to my Lovable project?
 
 Yes, you can!
