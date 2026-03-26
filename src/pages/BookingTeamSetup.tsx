@@ -704,41 +704,13 @@ export default function BookingTeamSetup() {
 
       const directMemberIds = directMembers.map((member) => member.id).filter((id) => id !== user.id);
       if (directMemberIds.length > 0) {
-        // Check existing invites/notifications
-        const { data: existingInvites } = await supabase
-          .from("booking_player_requests")
-          .select("user_id")
-          .eq("booking_id", numBookingId)
-          .eq("team_id", teamId)
-          .eq("request_type", "invite")
-          .in("user_id", directMemberIds);
-
-        const alreadyInvited = new Set((existingInvites || []).map((row) => row.user_id));
-
-        // Create invite requests for registered users (not already invited)
-        const inviteRows = directMembers
-          .filter((member) => member.id !== user.id && !alreadyInvited.has(member.id))
-          .map((member) => ({
-            booking_id: numBookingId,
-            team_id: teamId,
-            source_team_id: null,
-            requested_by: user.id,
-            user_id: member.id,
-            request_type: "invite" as const,
-            status: "pending" as const,
-          }));
-
-        if (inviteRows.length > 0) {
-          await supabase.from("booking_player_requests").insert(inviteRows);
-        }
-
-        // Send notifications for invites
+        // Send notifications to added players (notification only, no accept/reject needed)
         const { data: existingNotifications } = await supabase
           .from("notifications")
           .select("recipient_user_id")
           .eq("booking_id", numBookingId)
           .eq("team_id", teamId)
-          .eq("type", "team_invite")
+          .eq("type", "team_assignment")
           .in("recipient_user_id", directMemberIds);
 
         const alreadyNotified = new Set((existingNotifications || []).map((row) => row.recipient_user_id));
@@ -749,10 +721,10 @@ export default function BookingTeamSetup() {
             actor_user_id: user.id,
             booking_id: numBookingId,
             team_id: teamId,
-            type: "team_invite",
-            title: "You have been invited to join a team",
-            message: `You have been invited to join ${trimmedTeamName} for booking #${numBookingId}.`,
-            action_url: "/dashboard",
+            type: "team_assignment",
+            title: "You were added to a team",
+            message: `You were added to ${trimmedTeamName} for booking #${numBookingId}.`,
+            action_url: "/my-bookings",
             metadata: {
               captain: captain.name,
               teamName: trimmedTeamName,
