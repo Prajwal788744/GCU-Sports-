@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { useBookingLobbyRealtime } from "@/hooks/useRealtimeSubscription";
 import { Button } from "@/components/ui/button";
 import { ensureBookingMatchStarted } from "@/lib/booking-match";
 import { ArrowLeft, CheckCircle2, Loader2, Shield, Swords, Trophy, Users } from "lucide-react";
@@ -159,31 +160,8 @@ export default function MatchLobby() {
     loadLobbyState();
   }, [loadLobbyState]);
 
-  // Realtime subscription for lobby state changes
-  useEffect(() => {
-    if (!numBookingId) return;
-
-    const channel = supabase
-      .channel(`lobby-${numBookingId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "booking_teams",
-          filter: `booking_id=eq.${numBookingId}`,
-        },
-        () => {
-          // Re-fetch full lobby state on any change
-          loadLobbyState();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [numBookingId, loadLobbyState]);
+  // Realtime subscription for lobby state changes using enhanced hook
+  useBookingLobbyRealtime(numBookingId, loadLobbyState);
 
   const handleGoIn = async () => {
     if (!user || !currentUserTeam) {

@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRealtimeNotifications } from "@/hooks/useRealtimeSubscription";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import {
   ArrowRight,
@@ -117,6 +118,157 @@ export default function Dashboard() {
   const [pendingMatchRequests, setPendingMatchRequests] = useState<MatchRequest[]>([]);
   const [pendingBookingRequests, setPendingBookingRequests] = useState<BookingPlayerRequest[]>([]);
   const [notifications, setNotifications] = useState<PlayerNotification[]>([]);
+
+  // Refetch functions for realtime updates
+  const refetchMatchRequests = useCallback(async () => {
+    if (!user) return;
+    const { data: matchReqRes, error } = await supabase
+      .from("match_requests")
+      .select("id, booking_id, from_user_id, to_user_id, status, bookings(id,date,start_time,end_time)")
+      .eq("to_user_id", user.id)
+      .eq("status", "pending");
+
+    if (error) return;
+
+    const rows = (matchReqRes || []) as Omit<MatchRequest, "from_user">[];
+    const fromIds = Array.from(new Set(rows.map((row) => row.from_user_id)));
+    let profileMap: Record<string, { name: string | null; reg_no: string | null; department: string | null }> = {};
+
+    if (fromIds.length > 0) {
+      const { data: profiles } = await supabase.from("users").select("id, name, reg_no, department").in("id", fromIds);
+      profileMap = Object.fromEntries(
+        (profiles || []).map((profile: any) => [
+          profile.id,
+          { name: profile.name, reg_no: profile.reg_no, department: profile.department },
+        ])
+      );
+    }
+
+    setPendingMatchRequests(
+      rows.map((row) => ({
+        ...row,
+        from_user: profileMap[row.from_user_id] || null,
+      }))
+    );
+  }, [user]);
+
+  const refetchBookingRequests = useCallback(async () => {
+    if (!user) return;
+    const { data: bookingSwitchRes, error } = await supabase
+      .from("booking_player_requests")
+      .select("id, booking_id, team_id, source_team_id, requested_by, status, request_type")
+      .eq("user_id", user.id)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+
+    if (error) return;
+
+    const bookingRows = (bookingSwitchRes || []) as Array<{
+      id: number;
+      booking_id: number;
+      team_id: number;
+      source_team_id: number | null;
+      requested_by: string;
+      status: "pending" | "accepted" | "rejected";
+      request_type: "invite" | "team_switch";
+    }>;
+
+    const teamIds = Array.from(
+      new Set(
+        bookingRows
+          .flatMap((row) => [row.team_id, row.source_team_id])
+          .filter((value): value is number => typeof value === "number")
+      )
+    );
+    const requesterIds = Array.from(new Set(bookingRows.map((row) => row.requested_by)));
+
+    let teamMap = new Map<number, string>();
+    let requesterMap: Record<string, { name: string | null; reg_no: string | null; department: string | null }> = {};
+
+    if (teamIds.length > 0) {
+      const { data: teams } = await supabase.from("teams").select("id, name").in("id", teamIds);
+      teamMap = new Map((teams || []).map((team) => [Number(team.id), team.name]));
+    }
+
+    if (requesterIds.length > 0) {
+      const { data: requesterProfiles } = await supabase
+        .from("users")
+        .select("id, name, reg_no, department")
+        .in("id", requesterIds);
+      requesterMap = Object.fromEntries(
+        (requesterProfiles || []).map((profile: any) => [
+          profile.id,
+          { name: profile.name, reg_no: profile.reg_no, department: profile.department },
+        ])
+      );
+    }
+
+    setPendingBookingRequests(
+      bookingRows.map((row) => ({
+        ...row,
+        target_team_name: teamMap.get(row.team_id) || "Requested team",
+        source_team_name: row.source_team_id ? teamMap.get(row.source_team_id) || "Current team" : null,
+        requested_by_user: requesterMap[row.requested_by] || null,
+        request_type: row.request_type || "team_switch",
+      }))
+    );
+  }, [user]);
+
+  const refetchNotifications = useCallback(async () => {
+    if (!user) return;
+    const { data: notificationRes } = await supabase
+      .from("notifications")
+      .select("id, type, title, message, action_url, is_read, created_at, actor_user_id")
+      .eq("recipient_user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(8);
+
+    if (!notificationRes) return;
+
+    const actorIds = Array.from(
+      new Set(
+        (notificationRes || [])
+          .map((row) => row.actor_user_id)
+          .filter((value): value is string => typeof value === "string" && value.length > 0)
+      )
+    );
+
+    let actorMap: Record<string, string | null> = {};
+    if (actorIds.length > 0) {
+      const { data: actors } = await supabase.from("users").select("id, name").in("id", actorIds);
+      actorMap = Object.fromEntries((actors || []).map((actor: any) => [actor.id, actor.name]));
+    }
+
+    setNotifications(
+      (notificationRes || []).map((row) => ({
+        ...(row as Omit<PlayerNotification, "actor_name">),
+        actor_name: row.actor_user_id ? actorMap[row.actor_user_id] || null : null,
+      }))
+    );
+  }, [user]);
+
+  const refetchTeamJoinRequests = useCallback(async () => {
+    if (!user) return;
+    const { data: teamJoinRes } = await supabase
+      .from("team_join_requests")
+      .select("id, match_id, player_id, from_team, to_team, status, matches(team_a_name, team_b_name)")
+      .eq("status", "pending");
+
+    if (!teamJoinRes) return;
+
+    const { data: myPlayers } = await supabase.from("players").select("id").eq("user_id", user.id);
+    const myPlayerIds = new Set((myPlayers || []).map((player: { id: number }) => player.id));
+    const mine = (teamJoinRes || []).filter((request: any) => myPlayerIds.has(request.player_id));
+    setPendingRequests(mine as TeamJoinRequest[]);
+  }, [user]);
+
+  // Realtime subscriptions for instant updates
+  useUserRealtimeNotifications(user?.id, {
+    onNotification: refetchNotifications,
+    onMatchRequest: refetchMatchRequests,
+    onBookingRequest: refetchBookingRequests,
+    onTeamJoinRequest: refetchTeamJoinRequests,
+  });
 
   useEffect(() => {
     let active = true;

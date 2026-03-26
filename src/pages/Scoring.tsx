@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { useMatchRealtime } from "@/hooks/useRealtimeSubscription";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Trophy, Circle, ChevronRight, ChevronDown, Award, XCircle, Zap } from "lucide-react";
 import { toast } from "sonner";
@@ -152,6 +153,9 @@ export default function Scoring() {
   }, [numMatchId, currentInningsId]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  // Realtime subscription for match updates (syncs with other viewers/scorers)
+  useMatchRealtime(numMatchId, fetchAll);
 
   if (!match || innings.length === 0) return (
     <div className="min-h-screen bg-black/[0.96] text-white flex items-center justify-center">

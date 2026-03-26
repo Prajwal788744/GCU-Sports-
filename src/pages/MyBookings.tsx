@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserBookingsRealtime } from "@/hooks/useRealtimeSubscription";
 import { Button } from "@/components/ui/button";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { ensureBookingMatchStarted, getBookingMatchRoute } from "@/lib/booking-match";
@@ -192,6 +193,14 @@ export default function MyBookings() {
 
     setLoading(false);
   };
+
+  // Memoized fetch for realtime callback
+  const handleRealtimeUpdate = useCallback(() => {
+    fetchBookings();
+  }, [user]);
+
+  // Realtime subscription for bookings and match requests
+  useUserBookingsRealtime(user?.id, handleRealtimeUpdate);
 
   useEffect(() => {
     if (!challengeBooking || !challengeSearch.trim() || !user) {

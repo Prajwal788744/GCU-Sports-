@@ -4,9 +4,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import OnboardingDialog from "@/components/OnboardingDialog";
+import { RealtimeNotificationToast } from "@/components/RealtimeNotificationToast";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
@@ -69,10 +70,16 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 function OnboardingGate({ children }: { children: React.ReactNode }) {
   const { session, user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [checkingProfile, setCheckingProfile] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
   const shouldCheckOnboarding = location.pathname === "/dashboard";
+
+  // Realtime notification navigation handler
+  const handleNotificationNavigate = useCallback((url: string) => {
+    navigate(url);
+  }, [navigate]);
 
   useEffect(() => {
     let active = true;
@@ -121,6 +128,8 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
   return (
     <>
       {children}
+      {/* Global realtime notification listeners */}
+      {user && <RealtimeNotificationToast userId={user.id} onNavigate={handleNotificationNavigate} />}
       {user && shouldCheckOnboarding && !checkingProfile && needsOnboarding && (
         <OnboardingDialog user={user} open={needsOnboarding} onComplete={() => setNeedsOnboarding(false)} />
       )}
