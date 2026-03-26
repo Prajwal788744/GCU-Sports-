@@ -92,20 +92,30 @@ export default function MatchLobby() {
   const currentUserReady = currentUserTeam?.team_ready ?? false;
 
   const fetchTeamPlayers = useCallback(async (teamId: number): Promise<TeamPlayerDisplay[]> => {
-    const { data, error } = await supabase
+    const { data: tpRows, error: tpError } = await supabase
       .from("team_players")
-      .select("user_id, is_captain, users(name, avatar_url)")
+      .select("user_id, is_captain")
       .eq("team_id", teamId);
 
-    if (error || !data) return [];
+    if (tpError || !tpRows || tpRows.length === 0) return [];
 
-    return (data as unknown as Array<{ user_id: string; is_captain: boolean; users: { name: string | null; avatar_url: string | null } | null }>)
-      .map((row) => ({
+    const userIds = tpRows.map((row) => row.user_id);
+    const { data: userRows } = await supabase
+      .from("users")
+      .select("id, name, avatar_url")
+      .in("id", userIds);
+
+    const userMap = new Map((userRows || []).map((u) => [u.id, u]));
+
+    return tpRows.map((row) => {
+      const userInfo = userMap.get(row.user_id);
+      return {
         user_id: row.user_id,
-        name: row.users?.name ?? null,
-        avatar_url: row.users?.avatar_url ?? null,
+        name: userInfo?.name ?? null,
+        avatar_url: userInfo?.avatar_url ?? null,
         is_captain: !!row.is_captain,
-      }));
+      };
+    });
   }, []);
 
   const loadLobbyState = useCallback(async () => {

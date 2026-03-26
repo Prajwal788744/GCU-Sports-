@@ -602,7 +602,13 @@ export default function BookingTeamSetup() {
       const editingPersistedTeam =
         !!persistedBookingTeamId && normalizeTeamName(persistedBookingTeamName) === normalizedName;
 
-      let teamId = resolvedSavedTeam?.id || (editingPersistedTeam ? persistedBookingTeamId : null);
+      // Also check conflictingTeams for a team already owned by this user
+      const ownedExisting = (conflictingTeams || []).find(
+        (team: { id: number; name: string; owner_user_id: string }) =>
+          normalizeTeamName(team.name) === normalizedName && team.owner_user_id === user.id
+      );
+
+      let teamId = resolvedSavedTeam?.id || ownedExisting?.id || (editingPersistedTeam ? persistedBookingTeamId : null);
 
       if (!teamId) {
         const { data: newTeam, error } = await supabase
