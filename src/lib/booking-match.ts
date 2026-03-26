@@ -139,9 +139,23 @@ export async function ensureBookingMatchStarted(bookingId: number, userId: strin
 
   // Auto-create missing player records instead of blocking the match
   if (missingPlayerUserIds.length > 0) {
+    // Fetch user names (players.name is NOT NULL)
+    const { data: missingUsers } = await supabase
+      .from("users")
+      .select("id, name")
+      .in("id", missingPlayerUserIds);
+
+    const missingUserMap = new Map((missingUsers || []).map((u: { id: string; name: string | null }) => [u.id, u.name || "Unknown"]));
+
     const { data: newPlayers, error: insertError } = await supabase
       .from("players")
-      .insert(missingPlayerUserIds.map((uid) => ({ user_id: uid })))
+      .insert(
+        missingPlayerUserIds.map((uid) => ({
+          user_id: uid,
+          name: missingUserMap.get(uid) || "Unknown",
+          sport_profile: {},
+        }))
+      )
       .select("id, user_id");
 
     if (insertError || !newPlayers) {
