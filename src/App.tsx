@@ -8,6 +8,8 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import OnboardingDialog from "@/components/OnboardingDialog";
 import { RealtimeNotificationToast } from "@/components/RealtimeNotificationToast";
+import OfflineBanner from "@/components/OfflineBanner";
+import InstallPrompt from "@/components/InstallPrompt";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
@@ -157,6 +159,8 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <OfflineBanner />
+      <InstallPrompt />
       <BrowserRouter>
         <AuthGuard>
           <OnboardingGate>

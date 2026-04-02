@@ -1,11 +1,77 @@
 <!doctype html>
 <html lang="en">
   <head>
-   
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+
+    <!-- PWA Meta -->
+    <meta name="theme-color" content="#34536d" />
+    <meta name="description" content="Book sports venues, create matches, and track live scores at GCU" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- Apple PWA Meta -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="GCU Sports" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+
+    <!-- Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/gcu-logo.png" />
+
+    <title>GCU Sports</title>
   </head>
 
   <body>
-    <div id="root"></div>
+    <!-- Splash screen shown while React loads -->
+    <div id="root">
+      <div id="pwa-splash" style="
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #0f1a24;
+        z-index: 99999;
+        gap: 1.25rem;
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        transition: opacity 0.4s ease-out;
+      ">
+        <img
+          src="/gcu-logo.png"
+          alt="GCU Sports"
+          width="72"
+          height="72"
+          style="
+            border-radius: 18px;
+            object-fit: cover;
+            animation: splashPulse 2s ease-in-out infinite;
+          "
+        />
+        <div style="
+          width: 36px;
+          height: 36px;
+          border: 3px solid rgba(107, 154, 196, 0.2);
+          border-top-color: #6b9ac4;
+          border-radius: 50%;
+          animation: splashSpin 0.8s linear infinite;
+        "></div>
+      </div>
+    </div>
+
+    <style>
+      @keyframes splashSpin {
+        to { transform: rotate(360deg); }
+      }
+      @keyframes splashPulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.85; }
+      }
+    </style>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
