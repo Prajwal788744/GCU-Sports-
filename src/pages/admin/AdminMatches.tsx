@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { Gamepad2, X, Edit3, Ban, Trophy, Clock } from "lucide-react";
+import { Gamepad2, X, Edit3, Ban, Trophy, Clock, Eye } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const sportNames: Record<number, string> = { 1: "Cricket Turf", 2: "Futsal", 3: "Badminton" };
@@ -11,6 +12,7 @@ interface MatchRow {
 }
 
 export default function AdminMatches() {
+  const navigate = useNavigate();
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [editMatch, setEditMatch] = useState<MatchRow | null>(null);
@@ -109,6 +111,11 @@ export default function AdminMatches() {
               <span className={`inline-block rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase flex-shrink-0 ${statusColor(m.status)}`}>{m.status}</span>
 
               <div className="flex gap-1.5 flex-shrink-0">
+                {(m.status === "ongoing" || m.status === "completed") && (
+                  <button onClick={() => navigate(`/live/${m.id}`)} className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-2 text-emerald-400/60 hover:text-emerald-400 hover:bg-emerald-500/20 transition-all" title="View Live">
+                    <Eye className="h-3.5 w-3.5" />
+                  </button>
+                )}
                 <button onClick={() => openEdit(m)} className="rounded-lg border border-white/[0.08] bg-white/[0.04] p-2 text-white/40 hover:text-white hover:bg-white/[0.08] transition-all" title="Edit">
                   <Edit3 className="h-3.5 w-3.5" />
                 </button>

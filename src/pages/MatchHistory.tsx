@@ -22,32 +22,42 @@ export default function MatchHistory() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      // Step 1: Get user's player IDs
-      const { data: myPlayers } = await supabase.from("players").select("id").eq("user_id", user.id);
-      if (!myPlayers || myPlayers.length === 0) {
-        setMatches([]);
-        setLoading(false);
-        return;
-      }
-      const playerIds = myPlayers.map((p: { id: number }) => p.id);
-      // Step 2: Get match IDs where this user played
-      const { data: matchPlayerRows } = await supabase
-        .from("match_players")
-        .select("match_id")
-        .in("player_id", playerIds);
-      if (!matchPlayerRows || matchPlayerRows.length === 0) {
-        setMatches([]);
-        setLoading(false);
-        return;
-      }
-      const matchIds = [...new Set(matchPlayerRows.map((mp: { match_id: number }) => mp.match_id))];
-      // Step 3: Fetch only those matches
-      const { data } = await supabase
+      // Fetch ALL ongoing matches so everyone can watch live
+      const { data: allLive } = await supabase
         .from("matches")
         .select("*")
-        .in("id", matchIds)
+        .eq("status", "ongoing")
         .order("created_at", { ascending: false });
-      setMatches(data || []);
+
+      // Step 1: Get user's player IDs for their own matches
+      const { data: myPlayers } = await supabase.from("players").select("id").eq("user_id", user.id);
+      const playerIds = (myPlayers || []).map((p: { id: number }) => p.id);
+
+      let userMatches: MatchRow[] = [];
+      if (playerIds.length > 0) {
+        const { data: matchPlayerRows } = await supabase
+          .from("match_players")
+          .select("match_id")
+          .in("player_id", playerIds);
+        if (matchPlayerRows && matchPlayerRows.length > 0) {
+          const matchIds = [...new Set(matchPlayerRows.map((mp: { match_id: number }) => mp.match_id))];
+          const { data } = await supabase
+            .from("matches")
+            .select("*")
+            .in("id", matchIds)
+            .order("created_at", { ascending: false });
+          userMatches = (data || []) as MatchRow[];
+        }
+      }
+
+      // Merge: all live matches + user's own matches (deduplicated)
+      const liveIds = new Set((allLive || []).map((m: MatchRow) => m.id));
+      const merged = [
+        ...((allLive || []) as MatchRow[]),
+        ...userMatches.filter((m) => !liveIds.has(m.id)),
+      ];
+
+      setMatches(merged);
       setLoading(false);
     })();
   }, [user]);

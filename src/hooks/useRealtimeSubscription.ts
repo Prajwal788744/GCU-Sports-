@@ -319,6 +319,16 @@ export function useBookingLobbyRealtime(bookingId: number | undefined, onUpdate:
         },
         onUpdate
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "matches",
+          filter: `booking_id=eq.${bookingId}`,
+        },
+        onUpdate
+      )
       .subscribe((status, err) => {
         console.log(`[Realtime] booking-lobby-${bookingId} status:`, status, err || '');
       });
