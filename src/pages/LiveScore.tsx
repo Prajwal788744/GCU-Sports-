@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Trophy, Wifi, Award, Zap } from "lucide-react";
+import { ArrowLeft, Trophy, Wifi, Award, Zap, LayoutDashboard } from "lucide-react";
 import { formatRoleLabel, getSportProfileTeaser, normalizeSportProfile, type SportProfileRecord } from "@/lib/player-profile";
 
 interface MatchData {
@@ -187,8 +187,12 @@ export default function LiveScore() {
 
       <nav className="sticky top-0 z-50 border-b border-white/[0.06] bg-black/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4">
-          <button onClick={() => navigate(-1)} className="text-sm text-white/50 hover:text-white transition-colors">
-            <ArrowLeft className="h-4 w-4" />
+          <button
+            onClick={() => navigate(match.status === "completed" ? "/dashboard" : -1 as any)}
+            className="flex items-center gap-1.5 text-sm text-white/50 hover:text-white transition-colors group"
+          >
+            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+            <span className="hidden sm:inline">{match.status === "completed" ? "Dashboard" : "Back"}</span>
           </button>
           <div className="flex items-center gap-2">
             {match.status === "ongoing" && <Wifi className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />}
@@ -248,6 +252,12 @@ export default function LiveScore() {
                   <Award className="h-3.5 w-3.5" /> Man of the Match: <span className="font-bold">{motmName}</span>
                 </div>
               )}
+              <button
+                onClick={() => navigate("/dashboard")}
+                className="mt-4 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/[0.08] hover:text-white transition-all duration-200"
+              >
+                <LayoutDashboard className="h-4 w-4" /> Go to Dashboard
+              </button>
             </div>
           )}
           {match.status === "ongoing" && match.current_innings === 2 && inn1 && currentInnings && (() => {

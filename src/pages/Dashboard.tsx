@@ -790,12 +790,18 @@ export default function Dashboard() {
 
         {matches.length > 0 && (
           <div className="mt-14 animate-fade-up" style={{ animationDelay: "0.3s" }}>
-            <div className="mb-6 flex items-center gap-3">
+          <div className="mb-6 flex items-center gap-3">
               <Gamepad2 className="h-7 w-7 text-emerald-400" />
               <h2 className="text-2xl font-extrabold tracking-tight">My Matches</h2>
               <span className="ml-1 inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 text-sm font-bold text-emerald-400">
                 {totalMatches}
               </span>
+              <button
+                onClick={() => navigate("/matches")}
+                className="ml-auto flex items-center gap-1 text-xs font-semibold text-emerald-400/60 hover:text-emerald-400 transition-colors"
+              >
+                View All Matches <ArrowRight className="h-3 w-3" />
+              </button>
             </div>
 
             <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { ensureBookingMatchStarted, getBookingMatchRoute } from "@/lib/booking-match";
 import { toast } from "sonner";
-import { X, ArrowRightLeft, Clock, CalendarCheck, Trophy, ArrowLeft, AlertTriangle, Gamepad2, Eye, Gamepad, Search, Users, Swords } from "lucide-react";
+import { X, ArrowRightLeft, Clock, CalendarCheck, Trophy, ArrowLeft, AlertTriangle, Gamepad2, Eye, Swords, Search, Users } from "lucide-react";
 import GcuLogo from "@/components/GcuLogo";
 import { format, addDays } from "date-fns";
 
@@ -84,7 +84,6 @@ export default function MyBookings() {
   const [loading, setLoading] = useState(true);
   const [matchStatuses, setMatchStatuses] = useState<Record<number, { matchId: number; status: string; teamA: string; teamB: string; winner: string | null }>>({});
 
-  const [allCompletedMatches, setAllCompletedMatches] = useState<{ id: number; teamA: string; teamB: string; winner: string | null; matchType: string; totalOvers: number; createdAt: string }[]>([]);
   const [bookingTeamsCount, setBookingTeamsCount] = useState<Record<number, number>>({});
   const [opponentBookingIds, setOpponentBookingIds] = useState<Set<number>>(new Set());
 
@@ -172,19 +171,6 @@ export default function MyBookings() {
           .eq("status", "accepted");
         void acceptedReqs;
       }
-    }
-
-    // Fetch ALL completed matches (regardless of who booked)
-    const { data: completedMatches } = await supabase
-      .from("matches")
-      .select("id, team_a_name, team_b_name, winner, match_type, total_overs, created_at")
-      .eq("status", "completed")
-      .order("created_at", { ascending: false });
-    if (completedMatches) {
-      setAllCompletedMatches(completedMatches.map(m => ({
-        id: m.id, teamA: m.team_a_name, teamB: m.team_b_name, winner: m.winner,
-        matchType: m.match_type, totalOvers: m.total_overs, createdAt: m.created_at,
-      })));
     }
 
     setLoading(false);
@@ -353,9 +339,18 @@ export default function MyBookings() {
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-white/[0.06] bg-black/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-2.5 font-extrabold text-lg">
-            <GcuLogo />
-            <span className="tracking-tight text-white hidden sm:inline">GCU Sports</span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors group"
+            >
+              <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </button>
+            <div className="hidden sm:flex items-center gap-2.5 font-extrabold text-lg">
+              <GcuLogo />
+              <span className="tracking-tight text-white hidden sm:inline">GCU Sports</span>
+            </div>
           </div>
           <div className="hidden md:flex items-center gap-3">
             <button
@@ -371,7 +366,7 @@ export default function MyBookings() {
               Logout
             </button>
           </div>
-          {/* Mobile: only logout */}
+          {/* Mobile: logout only */}
           <div className="flex md:hidden items-center gap-2">
             <button
               onClick={async () => { await signOut(); navigate("/"); }}
@@ -581,54 +576,24 @@ export default function MyBookings() {
               </div>
             )}
 
-            {/* All Completed Matches (global) */}
-            {allCompletedMatches.length > 0 && (
-              <div className="mt-10 animate-fade-up" style={{ animationDelay: "0.25s" }}>
-                <h3 className="text-sm font-bold text-emerald-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <Trophy className="h-3.5 w-3.5" /> All Completed Matches
-                </h3>
-                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
-                  <div className="grid grid-cols-4 text-[10px] font-bold text-white/30 uppercase px-5 py-3 border-b border-white/[0.04]">
-                    <span className="col-span-1">Teams</span>
-                    <span className="text-center">Type</span>
-                    <span className="text-center">Result</span>
-                    <span className="text-right">Action</span>
+            {/* Nudge to Matches page for full history */}
+            <div className="mt-10 animate-fade-up" style={{ animationDelay: "0.25s" }}>
+              <div className="flex items-center justify-between rounded-2xl border border-white/[0.06] bg-white/[0.02] px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <Gamepad2 className="h-5 w-5 text-emerald-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-white/80">Want to see all past matches?</p>
+                    <p className="text-xs text-white/40 mt-0.5">Live scores, completed games & scorecards from every player.</p>
                   </div>
-                  {allCompletedMatches.map((m) => {
-                    const winnerName = m.winner === "tie" ? "Tied" : m.winner === "A" ? `${m.teamA} won` : m.winner === "B" ? `${m.teamB} won` : "—";
-                    const date = new Date(m.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-                    return (
-                      <div key={m.id} className="grid grid-cols-4 items-center px-5 py-3.5 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.02] transition-colors">
-                        <div className="col-span-1">
-                          <p className="text-sm font-semibold text-white/80 truncate">
-                            {m.teamA} <span className="text-white/30">vs</span> {m.teamB}
-                          </p>
-                          <p className="text-[10px] text-white/30 mt-0.5">{date}</p>
-                        </div>
-                        <div className="text-center">
-                          <span className="text-xs text-white/40 font-medium">{m.matchType} · {m.totalOvers}ov</span>
-                        </div>
-                        <div className="text-center">
-                          <span className={`inline-block text-xs font-bold px-2.5 py-1 rounded-full border ${
-                            m.winner === "tie" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                          }`}>
-                            {winnerName}
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <button
-                            onClick={() => navigate(`/live/${m.id}`)}
-                            className="text-xs text-emerald-400/70 hover:text-emerald-400 transition-colors font-semibold flex items-center gap-1 ml-auto"
-                          >
-                            <Eye className="h-3 w-3" /> View
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
                 </div>
+                <button
+                  onClick={() => navigate("/matches")}
+                  className="flex-shrink-0 ml-4 flex items-center gap-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all"
+                >
+                  <Swords className="h-3.5 w-3.5" /> Go to Matches
+                </button>
               </div>
-            )}
+            </div>
           </>
         )}
       </main>

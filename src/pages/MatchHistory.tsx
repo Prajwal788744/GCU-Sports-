@@ -20,7 +20,6 @@ export default function MatchHistory() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
     (async () => {
       // Fetch ALL ongoing matches so everyone can watch live
       const { data: allLive } = await supabase
@@ -29,32 +28,44 @@ export default function MatchHistory() {
         .eq("status", "ongoing")
         .order("created_at", { ascending: false });
 
-      // Step 1: Get user's player IDs for their own matches
-      const { data: myPlayers } = await supabase.from("players").select("id").eq("user_id", user.id);
-      const playerIds = (myPlayers || []).map((p: { id: number }) => p.id);
+      // Fetch ALL completed matches — visible to every logged-in user
+      const { data: allCompleted } = await supabase
+        .from("matches")
+        .select("*")
+        .eq("status", "completed")
+        .not("winner", "is", null)
+        .order("created_at", { ascending: false });
 
-      let userMatches: MatchRow[] = [];
-      if (playerIds.length > 0) {
-        const { data: matchPlayerRows } = await supabase
-          .from("match_players")
-          .select("match_id")
-          .in("player_id", playerIds);
-        if (matchPlayerRows && matchPlayerRows.length > 0) {
-          const matchIds = [...new Set(matchPlayerRows.map((mp: { match_id: number }) => mp.match_id))];
-          const { data } = await supabase
-            .from("matches")
-            .select("*")
-            .in("id", matchIds)
-            .order("created_at", { ascending: false });
-          userMatches = (data || []) as MatchRow[];
+      // Fetch all not_started matches the user is part of
+      let userUpcoming: MatchRow[] = [];
+      if (user) {
+        const { data: myPlayers } = await supabase.from("players").select("id").eq("user_id", user.id);
+        const playerIds = (myPlayers || []).map((p: { id: number }) => p.id);
+        if (playerIds.length > 0) {
+          const { data: matchPlayerRows } = await supabase
+            .from("match_players")
+            .select("match_id")
+            .in("player_id", playerIds);
+          if (matchPlayerRows && matchPlayerRows.length > 0) {
+            const matchIds = [...new Set(matchPlayerRows.map((mp: { match_id: number }) => mp.match_id))];
+            const { data } = await supabase
+              .from("matches")
+              .select("*")
+              .in("id", matchIds)
+              .eq("status", "not_started")
+              .order("created_at", { ascending: false });
+            userUpcoming = (data || []) as MatchRow[];
+          }
         }
       }
 
-      // Merge: all live matches + user's own matches (deduplicated)
+      // Merge everything (deduplicated)
       const liveIds = new Set((allLive || []).map((m: MatchRow) => m.id));
+      const completedIds = new Set((allCompleted || []).map((m: MatchRow) => m.id));
       const merged = [
         ...((allLive || []) as MatchRow[]),
-        ...userMatches.filter((m) => !liveIds.has(m.id)),
+        ...((allCompleted || []) as MatchRow[]),
+        ...userUpcoming.filter((m) => !liveIds.has(m.id) && !completedIds.has(m.id)),
       ];
 
       setMatches(merged);
@@ -89,7 +100,11 @@ export default function MatchHistory() {
               <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" /> Dashboard
             </button>
           </div>
-          <div className="md:hidden" />
+          <div className="flex md:hidden">
+            <button onClick={() => navigate("/dashboard")} className="flex items-center gap-1.5 text-sm text-white/50 hover:text-white transition-colors group">
+              <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -107,7 +122,7 @@ export default function MatchHistory() {
           <div className="flex flex-col items-center justify-center py-20 animate-fade-up">
             <Gamepad2 className="h-12 w-12 mb-4 text-white/10" />
             <p className="text-lg text-white/30">No matches yet.</p>
-            <p className="text-sm text-white/20 mt-1">Create one from your cricket booking!</p>
+            <p className="text-sm text-white/20 mt-1">Matches will appear here once they start!</p>
           </div>
         ) : (
           <>
@@ -173,33 +188,81 @@ export default function MatchHistory() {
               </div>
             )}
 
-            {/* Completed */}
+            {/* Completed — all matches, visible to everyone */}
             {completedMatches.length > 0 && (
               <div className="animate-fade-up" style={{ animationDelay: "0.2s" }}>
-                <h3 className="text-sm font-bold text-white/50 uppercase tracking-wider mb-4">Completed</h3>
-                <ul className="grid gap-3 sm:grid-cols-2">
+                <div className="mb-4 flex items-center gap-2">
+                  <Trophy className="h-4 w-4 text-amber-400" />
+                  <h3 className="text-sm font-bold text-white/50 uppercase tracking-wider">
+                    Completed Matches
+                  </h3>
+                  <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] px-1.5 text-[10px] font-bold text-white/40">
+                    {completedMatches.length}
+                  </span>
+                </div>
+                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+                  {/* Desktop table header */}
+                  <div className="hidden sm:grid grid-cols-4 text-[10px] font-bold text-white/30 uppercase px-5 py-3 border-b border-white/[0.04]">
+                    <span className="col-span-2">Teams</span>
+                    <span className="text-center">Result</span>
+                    <span className="text-right">Scorecard</span>
+                  </div>
                   {completedMatches.map((m) => {
-                    const winnerName = m.winner === "A" ? m.team_a_name : m.winner === "B" ? m.team_b_name : "Tie";
+                    const winnerName =
+                      m.winner === "tie"
+                        ? "Tied"
+                        : m.winner === "A"
+                        ? `${m.team_a_name} won`
+                        : m.winner === "B"
+                        ? `${m.team_b_name} won`
+                        : "—";
+                    const date = new Date(m.created_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    });
                     return (
-                      <li key={m.id} className="list-none">
-                        <button
-                          onClick={() => navigate(`/live/${m.id}`)}
-                          className="w-full text-left rounded-xl border border-white/[0.04] bg-white/[0.02] p-4 hover:bg-white/[0.04] transition-colors opacity-70 hover:opacity-100"
-                        >
-                          <p className="text-sm font-bold text-white/60">
-                            {m.team_a_name} vs {m.team_b_name}
+                      <div
+                        key={m.id}
+                        className="flex flex-col sm:grid sm:grid-cols-4 items-start sm:items-center px-5 py-4 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.02] transition-colors gap-2 sm:gap-0"
+                      >
+                        {/* Teams + date */}
+                        <div className="sm:col-span-2">
+                          <p className="text-sm font-semibold text-white/80">
+                            {m.team_a_name}{" "}
+                            <span className="text-white/30">vs</span>{" "}
+                            {m.team_b_name}
                           </p>
-                          <div className="flex items-center justify-between mt-1.5">
-                            <span className="text-xs text-white/30">{m.match_type} · {m.total_overs}ov</span>
-                            <span className="text-xs font-bold text-emerald-400/70 flex items-center gap-1">
-                              <Trophy className="h-3 w-3" /> {winnerName}
-                            </span>
-                          </div>
-                        </button>
-                      </li>
+                          <p className="text-[10px] text-white/30 mt-0.5">
+                            {m.match_type} · {m.total_overs}ov · {date}
+                          </p>
+                        </div>
+
+                        {/* Result badge */}
+                        <div className="sm:text-center">
+                          <span
+                            className={`inline-block text-xs font-bold px-2.5 py-1 rounded-full border ${
+                              m.winner === "tie"
+                                ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                            }`}
+                          >
+                            {winnerName}
+                          </span>
+                        </div>
+
+                        {/* View scorecard */}
+                        <div className="sm:text-right">
+                          <button
+                            onClick={() => navigate(`/live/${m.id}`)}
+                            className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400/70 hover:text-emerald-400 transition-colors sm:ml-auto"
+                          >
+                            <Eye className="h-3.5 w-3.5" /> View Scorecard
+                          </button>
+                        </div>
+                      </div>
                     );
                   })}
-                </ul>
+                </div>
               </div>
             )}
           </>

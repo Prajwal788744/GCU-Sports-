@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useMatchRealtime } from "@/hooks/useRealtimeSubscription";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Trophy, Circle, ChevronRight, ChevronDown, Award, XCircle, Zap, Undo2 } from "lucide-react";
+import { ArrowLeft, Trophy, Circle, ChevronRight, ChevronDown, Award, XCircle, Zap, Undo2, Eye } from "lucide-react";
 import { toast } from "sonner";
 
 interface MatchData {
@@ -556,14 +556,35 @@ export default function Scoring() {
   if (match.status === "completed") {
     return (
       <div className="min-h-screen bg-black/[0.96] text-white flex flex-col items-center justify-center p-6">
-        <Trophy className="h-16 w-16 text-amber-400 mb-4" />
-        <h1 className="text-3xl font-extrabold mb-2">Match Completed</h1>
-        <p className="text-white/50 mb-6">
-          {match.winner === "tie" ? "It's a tie!" : `${teamName(match.winner!)} wins!`}
-        </p>
-        <Button onClick={() => navigate(`/live/${numMatchId}`)} className="rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3">
-          View Scorecard
-        </Button>
+        <div className="fixed inset-0 z-0 pointer-events-none">
+          <div className="absolute top-1/3 left-1/4 w-[500px] h-[500px] rounded-full bg-amber-500/[0.04] blur-[120px]" />
+          <div className="absolute bottom-1/3 right-1/4 w-[400px] h-[400px] rounded-full bg-emerald-500/[0.04] blur-[100px]" />
+        </div>
+        <div className="relative z-10 flex flex-col items-center">
+          <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full border border-amber-500/20 bg-amber-500/10">
+            <Trophy className="h-12 w-12 text-amber-400" />
+          </div>
+          <h1 className="text-3xl font-extrabold mb-2 text-white">Match Completed</h1>
+          <p className="text-white/50 mb-2 text-lg">
+            {match.winner === "tie" ? "It's a tie! 🤝" : `🏆 ${teamName(match.winner!)} wins!`}
+          </p>
+          <p className="text-white/30 text-sm mb-8">Great game! Here's what you can do next:</p>
+          <div className="flex flex-col gap-3 w-full max-w-xs">
+            <Button
+              onClick={() => navigate(`/live/${numMatchId}`)}
+              className="rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-6 text-base font-bold shadow-lg shadow-emerald-500/20"
+            >
+              <Eye className="h-5 w-5 mr-2" /> View Scorecard
+            </Button>
+            <Button
+              onClick={() => navigate("/dashboard")}
+              variant="outline"
+              className="rounded-xl border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-white/70 hover:text-white px-8 py-6 text-base font-semibold"
+            >
+              <ArrowLeft className="h-5 w-5 mr-2" /> Go to Dashboard
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
