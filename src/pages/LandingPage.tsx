@@ -37,23 +37,23 @@ export default function LandingPage() {
   }, [handleMouseMove]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-black">
       {/* ── Navbar ── */}
-      <nav className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-xl">
+      <nav className="sticky top-0 z-50 border-b border-white/10 bg-black/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-2.5 font-extrabold text-lg text-primary">
+          <div className="flex items-center gap-2.5 font-extrabold text-lg text-white">
             <GcuLogo />
-            <span className="tracking-tight">GCU Sports</span>
+            <span className="tracking-tight text-white">GCU Sports</span>
           </div>
           <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Features</a>
-            <a href="#facilities" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Facilities</a>
-            <a href="#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">How it Works</a>
+            <a href="#features" className="text-sm font-medium text-neutral-400 hover:text-white transition-colors">Features</a>
+            <a href="#facilities" className="text-sm font-medium text-neutral-400 hover:text-white transition-colors">Facilities</a>
+            <a href="#how-it-works" className="text-sm font-medium text-neutral-400 hover:text-white transition-colors">How it Works</a>
           </div>
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
-              className="rounded-xl hidden sm:inline-flex"
+              className="rounded-xl hidden sm:inline-flex border-neutral-700 text-neutral-300 hover:bg-neutral-800 hover:text-white"
               onClick={() => navigate("/login")}
             >
               Sign In
@@ -182,17 +182,17 @@ export default function LandingPage() {
       </section>
 
       {/* ── Features Section ── */}
-      <section id="features" className="py-20 lg:py-28 px-4 sm:px-6">
+      <section id="features" className="py-20 lg:py-28 px-4 sm:px-6 bg-black/[0.96]">
         <div className="mx-auto max-w-7xl">
           <div className="text-center mb-16">
             <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-4 py-1.5 mb-4">
               <Star className="h-3.5 w-3.5 text-emerald-500" />
-              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Why GCU Sports</span>
+              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Why GCU Sports</span>
             </span>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight">
+            <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
               Everything you need to book sports
             </h2>
-            <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
+            <p className="mt-3 text-neutral-400 max-w-2xl mx-auto">
               A modern platform designed for university students to manage their sports facility bookings effortlessly.
             </p>
           </div>
@@ -207,7 +207,7 @@ export default function LandingPage() {
               { icon: <Trophy className="h-5 w-5" />, title: "Multi-Sport", desc: "Cricket, Futsal, Badminton — all your favourite sports in one platform." },
             ].map((feature, i) => (
               <li key={feature.title} className="list-none min-h-[14rem] animate-fade-up" style={{ animationDelay: `${i * 0.08}s` }}>
-                <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-border p-2 md:rounded-[1.5rem] md:p-3">
+                <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
                   <GlowingEffect
                     spread={40}
                     glow={true}
@@ -216,16 +216,16 @@ export default function LandingPage() {
                     inactiveZone={0.01}
                     borderWidth={3}
                   />
-                  <div className="relative flex h-full flex-col justify-between gap-6 overflow-hidden rounded-xl border-[0.75px] bg-background p-6 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+                  <div className="relative flex h-full flex-col justify-between gap-6 overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-neutral-900/80 p-6 shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
                     <div className="relative flex flex-1 flex-col justify-between gap-3">
-                      <div className="w-fit rounded-lg border-[0.75px] border-border bg-muted p-2.5 text-emerald-600 dark:text-emerald-400">
+                      <div className="w-fit rounded-lg border-[0.75px] border-white/10 bg-white/5 p-2.5 text-emerald-400">
                         {feature.icon}
                       </div>
                       <div className="space-y-2">
-                        <h3 className="text-xl leading-[1.375rem] font-semibold tracking-[-0.04em] text-foreground">
+                        <h3 className="text-xl leading-[1.375rem] font-semibold tracking-[-0.04em] text-white">
                           {feature.title}
                         </h3>
-                        <p className="text-sm leading-[1.375rem] text-muted-foreground">
+                        <p className="text-sm leading-[1.375rem] text-neutral-400">
                           {feature.desc}
                         </p>
                       </div>
@@ -239,13 +239,13 @@ export default function LandingPage() {
       </section>
 
       {/* ── Facilities Section ── */}
-      <section id="facilities" className="py-20 lg:py-28 px-4 sm:px-6 bg-muted/30">
+      <section id="facilities" className="py-20 lg:py-28 px-4 sm:px-6 bg-neutral-950">
         <div className="mx-auto max-w-7xl">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight">
+            <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
               Featured Facilities
             </h2>
-            <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
+            <p className="mt-3 text-neutral-400 max-w-2xl mx-auto">
               Professional-grade sports facilities equipped for competitive and recreational play.
             </p>
           </div>
@@ -257,7 +257,7 @@ export default function LandingPage() {
               { emoji: "🏸", name: "Badminton Courts", desc: "Indoor badminton courts with wooden flooring and proper lighting.", slots: 7, img: "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=600&h=400&fit=crop" },
             ].map((facility, i) => (
               <li key={facility.name} className="list-none animate-fade-up" style={{ animationDelay: `${i * 0.1}s` }}>
-                <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-2 md:rounded-[1.5rem] md:p-3">
+                <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
                   <GlowingEffect
                     spread={40}
                     glow={true}
@@ -266,7 +266,7 @@ export default function LandingPage() {
                     inactiveZone={0.01}
                     borderWidth={3}
                   />
-                  <div className="relative overflow-hidden rounded-xl border-[0.75px] bg-background shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+                  <div className="relative overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-neutral-900/80 shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
                     <div className="relative h-48 overflow-hidden">
                       <img
                         src={facility.img}
@@ -280,9 +280,9 @@ export default function LandingPage() {
                       </div>
                     </div>
                     <div className="p-6">
-                      <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{facility.desc}</p>
+                      <p className="text-sm text-neutral-400 mb-4 leading-relaxed">{facility.desc}</p>
                       <div className="flex items-center justify-between">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-900/30 px-3 py-1.5 text-xs font-bold text-emerald-400">
                           <CalendarCheck className="h-3.5 w-3.5" />
                           {facility.slots} slots available
                         </span>
@@ -304,13 +304,13 @@ export default function LandingPage() {
       </section>
 
       {/* ── How it Works ── */}
-      <section id="how-it-works" className="py-20 lg:py-28 px-4 sm:px-6">
+      <section id="how-it-works" className="py-20 lg:py-28 px-4 sm:px-6 bg-black/[0.96]">
         <div className="mx-auto max-w-7xl">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight">
+            <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
               How it Works
             </h2>
-            <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
+            <p className="mt-3 text-neutral-400 max-w-2xl mx-auto">
               Three simple steps to get your game on.
             </p>
           </div>
@@ -322,7 +322,7 @@ export default function LandingPage() {
               { step: "03", icon: <CalendarCheck className="h-6 w-6" />, title: "Confirm Booking", desc: "Confirm your slot instantly. Manage, postpone, or cancel anytime." },
             ].map((step, i) => (
               <li key={step.step} className="list-none animate-fade-up" style={{ animationDelay: `${i * 0.1}s` }}>
-                <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-2 md:rounded-[1.5rem] md:p-3">
+                <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
                   <GlowingEffect
                     spread={40}
                     glow={true}
@@ -331,13 +331,13 @@ export default function LandingPage() {
                     inactiveZone={0.01}
                     borderWidth={3}
                   />
-                  <div className="relative flex flex-col items-center text-center overflow-hidden rounded-xl border-[0.75px] bg-background p-8 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+                  <div className="relative flex flex-col items-center text-center overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-neutral-900/80 p-8 shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
                     <div className="text-5xl font-extrabold text-emerald-500/15 mb-2">{step.step}</div>
-                    <div className="w-fit rounded-xl bg-emerald-100 dark:bg-emerald-900/30 p-3 text-emerald-600 dark:text-emerald-400 mb-4">
+                    <div className="w-fit rounded-xl bg-emerald-900/30 p-3 text-emerald-400 mb-4">
                       {step.icon}
                     </div>
-                    <h3 className="text-lg font-bold text-foreground mb-2">{step.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+                    <h3 className="text-lg font-bold text-white mb-2">{step.title}</h3>
+                    <p className="text-sm text-neutral-400 leading-relaxed">{step.desc}</p>
                   </div>
                 </div>
               </li>
@@ -347,7 +347,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── CTA Section ── */}
-      <section className="py-20 px-4 sm:px-6">
+      <section className="py-20 px-4 sm:px-6 bg-neutral-950">
         <div className="mx-auto max-w-4xl">
           <Card className="relative overflow-hidden bg-black/[0.96] border-0 rounded-3xl p-12 md:p-16 text-center">
             <Spotlight
@@ -375,44 +375,44 @@ export default function LandingPage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="border-t bg-card/50 py-12 px-4 sm:px-6">
+      <footer className="border-t border-white/10 bg-black py-12 px-4 sm:px-6">
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <div className="flex items-center gap-2.5 font-extrabold text-lg text-primary mb-4">
+              <div className="flex items-center gap-2.5 font-extrabold text-lg text-white mb-4">
                 <GcuLogo className="h-8 w-8" />
                 GCU Sports
               </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <p className="text-sm text-neutral-400 leading-relaxed">
                 University Sports Slot Booking System. Making campus sports accessible for everyone.
               </p>
             </div>
             <div>
-              <h4 className="font-bold text-foreground mb-3 text-sm">Platform</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#facilities" className="hover:text-foreground transition-colors">Facilities</a></li>
-                <li><a href="#how-it-works" className="hover:text-foreground transition-colors">How it Works</a></li>
-                <li><a href="#features" className="hover:text-foreground transition-colors">Features</a></li>
+              <h4 className="font-bold text-white mb-3 text-sm">Platform</h4>
+              <ul className="space-y-2 text-sm text-neutral-400">
+                <li><a href="#facilities" className="hover:text-white transition-colors">Facilities</a></li>
+                <li><a href="#how-it-works" className="hover:text-white transition-colors">How it Works</a></li>
+                <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-foreground mb-3 text-sm">Sports</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
+              <h4 className="font-bold text-white mb-3 text-sm">Sports</h4>
+              <ul className="space-y-2 text-sm text-neutral-400">
                 <li>🏏 Cricket Turf</li>
                 <li>⚽ Futsal Court</li>
                 <li>🏸 Badminton Courts</li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-foreground mb-3 text-sm">Contact</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
+              <h4 className="font-bold text-white mb-3 text-sm">Contact</h4>
+              <ul className="space-y-2 text-sm text-neutral-400">
                 <li>sports@university.edu</li>
                 <li>+91 98765 43210</li>
                 <li>Sports Complex, Main Campus</li>
               </ul>
             </div>
           </div>
-          <div className="border-t mt-10 pt-6 text-center text-xs text-muted-foreground">
+          <div className="border-t border-white/10 mt-10 pt-6 text-center text-xs text-neutral-500">
             © 2026 GCU Sports. All rights reserved.
           </div>
         </div>
