@@ -490,21 +490,6 @@ export const SignInPage = ({ className }: SignInPageProps) => {
 
                   {/* Form */}
                   <form onSubmit={handleLogin} className="space-y-4">
-                    {/* Google sign-in */}
-                    <button
-                      type="button"
-                      className="backdrop-blur-sm w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-full py-3 px-4 transition-all duration-200 hover:border-emerald-500/30"
-                    >
-                      <span className="text-lg font-bold">G</span>
-                      <span className="text-sm">Sign in with Google</span>
-                    </button>
-
-                    <div className="flex items-center gap-4">
-                      <div className="h-px bg-white/10 flex-1" />
-                      <span className="text-white/30 text-xs uppercase tracking-widest">or</span>
-                      <div className="h-px bg-white/10 flex-1" />
-                    </div>
-
                     {/* Email */}
                     <div className="relative">
                       <input
